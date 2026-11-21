@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { initScene } from "./core/scene.js";
 import { loadWorld } from "./environment/world.js";
-import { initDesertGround } from "./environment/ground.js";
+import { initDesertGround, getGroundElevation } from "./environment/ground.js";
 import { initClouds } from "./environment/clouds.js";
 import { initTumbleweeds } from "./entities/tumbleweed.js";
 import { initWeather } from "./environment/weather.js";
@@ -37,40 +37,58 @@ const weather = initWeather(scene, sunLight, hemiLight, flare, {
 const npc = initNPC(scene, buildingBoxes, camera);
 
 const clock = new THREE.Clock();
-const speed = 20; // units per second — adjusted for perceptible movement
+const speed = 15; // base units per second
 
-// WASD movement control
-const keys = {
-  w: false,
-  a: false,
-  s: false,
-  d: false,
-};
+// Comprehensive keyboard state tracking (WASD, Arrows, QE elevation, Shift sprint)
+const activeKeys = new Set<string>();
 
 window.addEventListener("keydown", (e) => {
-  if (e.key in keys) keys[e.key as keyof typeof keys] = true;
+  activeKeys.add(e.code);
+  activeKeys.add(e.key.toLowerCase());
 });
+
 window.addEventListener("keyup", (e) => {
-  if (e.key in keys) keys[e.key as keyof typeof keys] = false;
+  activeKeys.delete(e.code);
+  activeKeys.delete(e.key.toLowerCase());
 });
 
 function animate() {
   requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.1);
 
-  // WASD camera movement
-  const moveSpeed = speed * dt;
+  // Smooth WASD camera movement synchronized with OrbitControls
+  const isSprinting = activeKeys.has("ShiftLeft") || activeKeys.has("ShiftRight");
+  const moveSpeed = (isSprinting ? speed * 2.2 : speed) * dt;
+
+  const moveDir = new THREE.Vector3();
   const forward = new THREE.Vector3();
   const right = new THREE.Vector3();
+
   camera.getWorldDirection(forward);
   forward.y = 0;
   forward.normalize();
   right.crossVectors(forward, camera.up).normalize();
 
-  if (keys.w) camera.position.add(forward.multiplyScalar(moveSpeed));
-  if (keys.s) camera.position.add(forward.multiplyScalar(-moveSpeed));
-  if (keys.a) camera.position.add(right.multiplyScalar(-moveSpeed));
-  if (keys.d) camera.position.add(right.multiplyScalar(moveSpeed));
+  if (activeKeys.has("KeyW") || activeKeys.has("w") || activeKeys.has("ArrowUp")) moveDir.add(forward);
+  if (activeKeys.has("KeyS") || activeKeys.has("s") || activeKeys.has("ArrowDown")) moveDir.sub(forward);
+  if (activeKeys.has("KeyD") || activeKeys.has("d") || activeKeys.has("ArrowRight")) moveDir.add(right);
+  if (activeKeys.has("KeyA") || activeKeys.has("a") || activeKeys.has("ArrowLeft")) moveDir.sub(right);
+  if (activeKeys.has("KeyE") || activeKeys.has("e") || activeKeys.has("Space")) moveDir.y += 1;
+  if (activeKeys.has("KeyQ") || activeKeys.has("q")) moveDir.y -= 1;
+
+  if (moveDir.lengthSq() > 0) {
+    moveDir.normalize().multiplyScalar(moveSpeed);
+    camera.position.add(moveDir);
+    controls.target.add(moveDir); // Shift orbit focal target in lockstep with camera
+  }
+
+  // Prevent camera from clipping underneath sand dunes
+  const minGroundY = getGroundElevation(camera.position.x, camera.position.z).height + 1.2;
+  if (camera.position.y < minGroundY) {
+    const diff = minGroundY - camera.position.y;
+    camera.position.y = minGroundY;
+    controls.target.y += diff;
+  }
 
   world.update(dt);
   weather.update(dt);
