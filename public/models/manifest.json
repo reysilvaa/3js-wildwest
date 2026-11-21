@@ -1,0 +1,34 @@
+{
+  "categories": {
+    "buildings": {
+      "hotel": "/models/buildings/hotel.glb",
+      "saloon": "/models/buildings/saloon.glb",
+      "bank": "/models/buildings/bank.glb",
+      "sheriff": "/models/buildings/sheriff.glb",
+      "store": "/models/buildings/store.glb",
+      "office": "/models/buildings/office.glb",
+      "depot": "/models/buildings/depot.glb",
+      "house": "/models/buildings/house.glb",
+      "settlement": "/models/buildings/settlement.glb"
+    },
+    "structures": {
+      "windmill": "/models/structures/windmill.glb",
+      "water_tower": "/models/structures/water_tower.glb",
+      "well": "/models/structures/well.glb"
+    },
+    "props": {
+      "cart": "/models/props/cart.glb",
+      "barrel": "/models/props/barrel.glb",
+      "bench": "/models/props/bench.glb",
+      "crates": "/models/props/crates.glb",
+      "hitching_post": "/models/props/hitching_post.glb",
+      "fence": "/models/props/fence.glb",
+      "telegraph_pole": "/models/props/telegraph_pole.glb"
+    },
+    "environment": {
+      "cloud": "/models/environment/cloud.glb",
+      "tumbleweed": "/models/environment/tumbleweed.glb",
+      "terrain": "/models/environment/terrain.glb"
+    }
+  }
+}

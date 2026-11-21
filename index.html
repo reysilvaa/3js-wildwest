@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wild West Town - Three.js</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #1a140e;
+        font-family: system-ui, -apple-system, sans-serif;
+      }
+      canvas {
+        display: block;
+      }
+      #loading {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: #f5deb3;
+        text-align: center;
+        pointer-events: none;
+        transition: opacity 0.5s ease;
+      }
+      #loading .bar {
+        width: 240px;
+        height: 6px;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 3px;
+        margin-top: 10px;
+        overflow: hidden;
+      }
+      #loading .fill {
+        width: 0%;
+        height: 100%;
+        background: #e59b3c;
+        transition: width 0.2s ease;
+      }
+      #info {
+        position: absolute;
+        top: 16px;
+        left: 16px;
+        color: rgba(255, 255, 255, 0.85);
+        background: rgba(20, 15, 10, 0.65);
+        padding: 8px 14px;
+        border-radius: 8px;
+        font-size: 13px;
+        pointer-events: none;
+        backdrop-filter: blur(4px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="loading">
+      <div id="status-text">Loading Wild West Town...</div>
+      <div class="bar"><div id="progress" class="fill"></div></div>
+    </div>
+    <div id="info">
+      <strong>Wild West Town</strong> &bull; Drag to rotate &bull; [N] Night/Day &bull; [R] Rain &bull; [C] Cycle &bull; [M] BGM
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
