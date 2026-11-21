@@ -34,6 +34,7 @@ export const ASSET_MAP = {
 
   // Characters & NPCs
   npc_jokowi: "/models/npc/jokowi.glb",
+  anim_walk: "/models/movement/walk.glb",
 } as const;
 
 export type AssetKey = keyof typeof ASSET_MAP;

@@ -1,0 +1,331 @@
+{
+  "indoor": [
+    {
+      "id": "Saloon_GroundFloor",
+      "pos": [
+        24.0,
+        2.12,
+        -9.0
+      ],
+      "color": 16752196,
+      "maxIntensity": 3.0,
+      "distance": 18.0,
+      "decay": 2.0
+    },
+    {
+      "id": "Saloon_UpperFloor",
+      "pos": [
+        24.0,
+        5.32,
+        -9.0
+      ],
+      "color": 16750909,
+      "maxIntensity": 2.5,
+      "distance": 18.0,
+      "decay": 2.0
+    },
+    {
+      "id": "Hotel_Lobby",
+      "pos": [
+        10.55,
+        2.71,
+        -30.47
+      ],
+      "color": 16753485,
+      "maxIntensity": 3.5,
+      "distance": 20.0,
+      "decay": 2.0
+    },
+    {
+      "id": "Hotel_Rooms",
+      "pos": [
+        10.55,
+        7.21,
+        -30.47
+      ],
+      "color": 16752196,
+      "maxIntensity": 3.0,
+      "distance": 18.0,
+      "decay": 2.0
+    },
+    {
+      "id": "Hotel_TopFloor",
+      "pos": [
+        10.55,
+        11.21,
+        -30.47
+      ],
+      "color": 16749624,
+      "maxIntensity": 2.5,
+      "distance": 16.0,
+      "decay": 2.0
+    },
+    {
+      "id": "Bank_Interior",
+      "pos": [
+        -4.0,
+        2.62,
+        7.0
+      ],
+      "color": 16754773,
+      "maxIntensity": 2.8,
+      "distance": 18.0,
+      "decay": 2.0
+    },
+    {
+      "id": "Sheriff_Office",
+      "pos": [
+        21.39,
+        2.5,
+        0.58
+      ],
+      "color": 16752196,
+      "maxIntensity": 2.5,
+      "distance": 16.0,
+      "decay": 2.0
+    },
+    {
+      "id": "Store_Interior",
+      "pos": [
+        21.39,
+        2.5,
+        13.09
+      ],
+      "color": 16753485,
+      "maxIntensity": 2.8,
+      "distance": 18.0,
+      "decay": 2.0
+    },
+    {
+      "id": "Depot_Interior",
+      "pos": [
+        -4.0,
+        2.71,
+        -16.46
+      ],
+      "color": 16752196,
+      "maxIntensity": 2.5,
+      "distance": 16.0,
+      "decay": 2.0
+    },
+    {
+      "id": "Office_Interior",
+      "pos": [
+        20.36,
+        2.62,
+        -31.0
+      ],
+      "color": 16752196,
+      "maxIntensity": 2.5,
+      "distance": 16.0,
+      "decay": 2.0
+    },
+    {
+      "id": "House_Interior",
+      "pos": [
+        -3.96,
+        2.71,
+        -6.99
+      ],
+      "color": 16750909,
+      "maxIntensity": 2.2,
+      "distance": 15.0,
+      "decay": 2.0
+    },
+    {
+      "id": "Church_Sanctuary",
+      "pos": [
+        -0.07,
+        4.65,
+        -43.57
+      ],
+      "color": 16756838,
+      "maxIntensity": 3.2,
+      "distance": 22.0,
+      "decay": 2.0
+    }
+  ],
+  "lanterns": [
+    [
+      18.5,
+      2.2,
+      -7.5
+    ],
+    [
+      10.5,
+      2.3,
+      -22.5
+    ],
+    [
+      -4.0,
+      2.2,
+      4.0
+    ],
+    [
+      17.0,
+      2.2,
+      12.0
+    ],
+    [
+      17.0,
+      2.2,
+      0.5
+    ],
+    [
+      -23.5,
+      2.2,
+      -3.5
+    ],
+    [
+      -4.0,
+      2.2,
+      -18.0
+    ]
+  ],
+  "windowSpills": [
+    {
+      "origin": [
+        19.0,
+        2.2,
+        -9.0
+      ],
+      "target": [
+        12.0,
+        0.0,
+        -9.0
+      ],
+      "angle": 1.0472,
+      "penumbra": 0.85,
+      "distance": 16.0,
+      "maxIntensity": 5.0
+    },
+    {
+      "origin": [
+        19.0,
+        5.4,
+        -9.0
+      ],
+      "target": [
+        11.0,
+        0.0,
+        -9.0
+      ],
+      "angle": 1.0472,
+      "penumbra": 0.9,
+      "distance": 20.0,
+      "maxIntensity": 4.0
+    },
+    {
+      "origin": [
+        10.55,
+        2.8,
+        -25.0
+      ],
+      "target": [
+        10.55,
+        0.0,
+        -18.0
+      ],
+      "angle": 0.8976,
+      "penumbra": 0.9,
+      "distance": 16.0,
+      "maxIntensity": 3.5
+    },
+    {
+      "origin": [
+        16.2,
+        2.3,
+        12.8
+      ],
+      "target": [
+        10.5,
+        0.0,
+        12.8
+      ],
+      "angle": 1.0472,
+      "penumbra": 0.85,
+      "distance": 14.0,
+      "maxIntensity": 4.5
+    },
+    {
+      "origin": [
+        16.2,
+        2.3,
+        0.58
+      ],
+      "target": [
+        10.5,
+        0.0,
+        0.58
+      ],
+      "angle": 1.0472,
+      "penumbra": 0.85,
+      "distance": 14.0,
+      "maxIntensity": 4.5
+    },
+    {
+      "origin": [
+        -0.5,
+        2.4,
+        7.0
+      ],
+      "target": [
+        5.5,
+        0.0,
+        7.0
+      ],
+      "angle": 1.0472,
+      "penumbra": 0.85,
+      "distance": 15.0,
+      "maxIntensity": 4.5
+    },
+    {
+      "origin": [
+        -0.5,
+        2.4,
+        -16.46
+      ],
+      "target": [
+        5.5,
+        0.0,
+        -16.46
+      ],
+      "angle": 1.0472,
+      "penumbra": 0.85,
+      "distance": 15.0,
+      "maxIntensity": 4.0
+    },
+    {
+      "origin": [
+        -0.5,
+        2.4,
+        -6.99
+      ],
+      "target": [
+        5.5,
+        0.0,
+        -6.99
+      ],
+      "angle": 0.8976,
+      "penumbra": 0.85,
+      "distance": 14.0,
+      "maxIntensity": 3.5
+    },
+    {
+      "origin": [
+        16.2,
+        2.4,
+        -31.0
+      ],
+      "target": [
+        10.5,
+        0.0,
+        -31.0
+      ],
+      "angle": 0.8976,
+      "penumbra": 0.85,
+      "distance": 14.0,
+      "maxIntensity": 3.5
+    }
+  ]
+}

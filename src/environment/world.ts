@@ -37,154 +37,63 @@ export function loadWorld(
   const windowMaterials: THREE.MeshStandardMaterial[] = [];
   const porchLights: THREE.PointLight[] = [];
 
-  interface IndoorLightConfig {
-    id: string;
-    pos: [number, number, number];
-    color: number;
-    maxIntensity: number;
-    distance: number;
-    decay: number;
+  interface TownLightsConfig {
+    indoor?: Array<{
+      id: string;
+      pos: [number, number, number];
+      color: number;
+      maxIntensity: number;
+      distance: number;
+      decay: number;
+    }>;
+    lanterns?: Array<[number, number, number]>;
+    windowSpills?: Array<{
+      origin: [number, number, number];
+      target: [number, number, number];
+      angle: number;
+      penumbra: number;
+      distance: number;
+      maxIntensity: number;
+    }>;
   }
 
   const indoorLights: { light: THREE.PointLight; maxIntensity: number }[] = [];
+  const windowSpillLights: { light: THREE.SpotLight; maxIntensity: number }[] = [];
 
-  // Load Blender-positioned indoor lights
-  fetch("/models/indoor_lights.json")
-    .then((res) => (res.ok ? res.json() : []))
-    .then((configs: IndoorLightConfig[]) => {
-      for (const cfg of configs) {
-        const light = new THREE.PointLight(cfg.color, 0, cfg.distance, cfg.decay);
-        light.position.set(...cfg.pos);
-        scene.add(light);
-        indoorLights.push({ light, maxIntensity: cfg.maxIntensity });
+  // Load all modular town lighting from external configuration
+  fetch("/models/town_lights.json")
+    .then((res) => (res.ok ? res.json() : {}))
+    .then((data: TownLightsConfig) => {
+      if (data.indoor) {
+        for (const cfg of data.indoor) {
+          const light = new THREE.PointLight(cfg.color, 0, cfg.distance, cfg.decay);
+          light.position.set(...cfg.pos);
+          scene.add(light);
+          indoorLights.push({ light, maxIntensity: cfg.maxIntensity });
+        }
+      }
+
+      if (data.lanterns) {
+        for (const pos of data.lanterns) {
+          const pl = new THREE.PointLight(0xffa34d, 0, 16, 2.0);
+          pl.position.set(...pos);
+          scene.add(pl);
+          porchLights.push(pl);
+        }
+      }
+
+      if (data.windowSpills) {
+        for (const cfg of data.windowSpills) {
+          const spot = new THREE.SpotLight(0xffbe6b, 0, cfg.distance, cfg.angle, cfg.penumbra, 2.0);
+          spot.position.set(...cfg.origin);
+          spot.target.position.set(...cfg.target);
+          scene.add(spot);
+          scene.add(spot.target);
+          windowSpillLights.push({ light: spot, maxIntensity: cfg.maxIntensity });
+        }
       }
     })
-    .catch((err) => console.warn("Failed to load indoor lights:", err));
-
-  // Warm entrance lantern point lights on wooden porches for key buildings
-  const lanternSpots: [number, number, number][] = [
-    [16.2, 2.4, -11.5],  // Saloon boardwalk
-    [10.5, 2.6, -22.0],  // Hotel grand entrance
-    [3.2, 2.4, 6.5],     // Bank boardwalk
-    [16.0, 2.4, 0.5],    // Sheriff boardwalk
-    [16.0, 2.4, 12.5],   // General Store boardwalk
-    [2.6, 2.4, -15.0],   // Depot platform
-    [15.5, 2.4, -29.0],  // Office boardwalk
-  ];
-
-  for (const pos of lanternSpots) {
-    const pl = new THREE.PointLight(0xffa34d, 0, 16, 2.0);
-    pl.position.set(...pos);
-    scene.add(pl);
-    porchLights.push(pl);
-  }
-
-  // Soft directional window spill spotlights (indoor light projecting outward through window glass)
-  interface WindowLightBeam {
-    light: THREE.SpotLight;
-    maxIntensity: number;
-  }
-  const windowSpillLights: WindowLightBeam[] = [];
-
-  const windowSpillConfigs: {
-    origin: [number, number, number];
-    target: [number, number, number];
-    angle: number;
-    penumbra: number;
-    distance: number;
-    maxIntensity: number;
-  }[] = [
-    // Saloon front ground-floor glass -> casts onto wooden boardwalk & street
-    {
-      origin: [16.8, 2.3, -11.5],
-      target: [10.5, 0.0, -11.5],
-      angle: Math.PI / 3.0,
-      penumbra: 0.85,
-      distance: 14.0,
-      maxIntensity: 4.8,
-    },
-    // Saloon front upper-floor windows -> soft cast into street
-    {
-      origin: [16.8, 4.8, -11.5],
-      target: [9.5, 0.0, -11.5],
-      angle: Math.PI / 3.2,
-      penumbra: 0.9,
-      distance: 16.0,
-      maxIntensity: 3.5,
-    },
-    // General Store front display windows -> casts onto crates & boardwalk
-    {
-      origin: [16.2, 2.3, 12.8],
-      target: [10.5, 0.0, 12.8],
-      angle: Math.PI / 3.0,
-      penumbra: 0.85,
-      distance: 14.0,
-      maxIntensity: 4.5,
-    },
-    // Sheriff office front window -> casts onto street
-    {
-      origin: [16.2, 2.3, 0.6],
-      target: [10.5, 0.0, 0.6],
-      angle: Math.PI / 3.0,
-      penumbra: 0.85,
-      distance: 14.0,
-      maxIntensity: 4.2,
-    },
-    // Hotel grand entrance & facade windows -> casts into front plaza
-    {
-      origin: [10.5, 2.8, -22.5],
-      target: [10.5, 0.0, -14.5],
-      angle: Math.PI / 2.8,
-      penumbra: 0.85,
-      distance: 16.0,
-      maxIntensity: 5.5,
-    },
-    // Bank front windows -> casts across west boardwalk into street
-    {
-      origin: [3.4, 2.3, 6.8],
-      target: [9.5, 0.0, 6.8],
-      angle: Math.PI / 3.0,
-      penumbra: 0.85,
-      distance: 14.0,
-      maxIntensity: 4.5,
-    },
-    // Depot platform windows -> casts onto train platform & tracks
-    {
-      origin: [2.8, 2.2, -15.0],
-      target: [8.5, 0.0, -15.0],
-      angle: Math.PI / 3.0,
-      penumbra: 0.85,
-      distance: 14.0,
-      maxIntensity: 4.2,
-    },
-    // Residential House front window
-    {
-      origin: [2.8, 2.0, -7.0],
-      target: [8.0, 0.0, -7.0],
-      angle: Math.PI / 3.2,
-      penumbra: 0.85,
-      distance: 13.0,
-      maxIntensity: 3.8,
-    },
-    // Office front window
-    {
-      origin: [15.8, 2.2, -29.0],
-      target: [10.5, 0.0, -29.0],
-      angle: Math.PI / 3.2,
-      penumbra: 0.85,
-      distance: 14.0,
-      maxIntensity: 4.0,
-    },
-  ];
-
-  for (const cfg of windowSpillConfigs) {
-    const spot = new THREE.SpotLight(0xffbe6b, 0, cfg.distance, cfg.angle, cfg.penumbra, 2.0);
-    spot.position.set(...cfg.origin);
-    spot.target.position.set(...cfg.target);
-    scene.add(spot);
-    scene.add(spot.target);
-    windowSpillLights.push({ light: spot, maxIntensity: cfg.maxIntensity });
-  }
+    .catch((err) => console.warn("Failed to load town lights:", err));
 
   const loadingEl = document.getElementById("loading");
   const progressEl = document.getElementById("progress");

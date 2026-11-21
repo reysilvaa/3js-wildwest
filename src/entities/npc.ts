@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { createModelObject, ModelObject } from "../core/models.js";
 import { getGroundElevation } from "../environment/ground.js";
 
@@ -7,6 +8,8 @@ export interface NPCOptions {
   buildingBoxes?: THREE.Box3[];
   camera?: THREE.Camera;
   walkSpeed?: number;
+  dataUrl?: string;
+  walkAnimUrl?: string;
 }
 
 export interface NPCController {
@@ -26,6 +29,8 @@ export function initNPC(
   const {
     initialPos = [10.0, 0.0, -10.0],
     walkSpeed = 1.3,
+    dataUrl = "/models/npc_data.json",
+    walkAnimUrl = "/models/movement/walk.glb",
   } = options;
 
   let model: ModelObject | null = null;
@@ -35,36 +40,6 @@ export function initNPC(
   let activeAction: THREE.AnimationAction | null = null;
   let currentActivityIndex = 0;
 
-  // Pre-initialize static fallback boxes for immediate collision safety
-  const staticBoxes: THREE.Box3[] = [
-    new THREE.Box3(new THREE.Vector3(5.93, -0.11, -35.86), new THREE.Vector3(15.16, 14.87, -20.97)),
-    new THREE.Box3(new THREE.Vector3(14.5, -0.13, -13.82), new THREE.Vector3(26.55, 7.55, -4.59)),
-    new THREE.Box3(new THREE.Vector3(-6.38, -0.13, 2.16), new THREE.Vector3(5.5, 7.17, 11.84)),
-    new THREE.Box3(new THREE.Vector3(14.31, -0.11, -4.04), new THREE.Vector3(26.31, 7.08, 5.19)),
-    new THREE.Box3(new THREE.Vector3(14.31, -0.11, 8.48), new THREE.Vector3(26.31, 7.08, 17.7)),
-    new THREE.Box3(new THREE.Vector3(15.52, -0.13, -33.38), new THREE.Vector3(25.2, 7.17, -21.5)),
-    new THREE.Box3(new THREE.Vector3(-6.5, -0.11, -21.07), new THREE.Vector3(5.5, 7.08, -11.84)),
-    new THREE.Box3(new THREE.Vector3(-6.35, -0.13, -11.33), new THREE.Vector3(5.5, 6.37, -2.62)),
-    new THREE.Box3(new THREE.Vector3(-3.32, -4.68, -46.92), new THREE.Vector3(3.39, 6.91, -39.95)),
-    new THREE.Box3(new THREE.Vector3(-2.9, -0.21, -1.58), new THREE.Vector3(0.27, 8.84, 1.61)),
-    new THREE.Box3(new THREE.Vector3(-3.93, -0.05, 11.33), new THREE.Vector3(-0.76, 2.77, 14.51)),
-    new THREE.Box3(new THREE.Vector3(-0.4, -2.5, -26.95), new THREE.Vector3(7.39, 9.33, -19.16)),
-    new THREE.Box3(new THREE.Vector3(-16, 0, 10.97), new THREE.Vector3(-14.64, 5.59, 21.12)),
-    new THREE.Box3(new THREE.Vector3(5.14, 0.02, 2.14), new THREE.Vector3(6.38, 1.02, 3.13)),
-    new THREE.Box3(new THREE.Vector3(2.86, 0.02, -3.19), new THREE.Vector3(4.11, 1.02, -2.11)),
-    new THREE.Box3(new THREE.Vector3(0.58, -0.09, 10.96), new THREE.Vector3(2.43, 1.62, 12.02)),
-    new THREE.Box3(new THREE.Vector3(5.89, -0.02, 8.62), new THREE.Vector3(6.66, 0.8, 9.4)),
-    new THREE.Box3(new THREE.Vector3(5.45, -0.01, 2.96), new THREE.Vector3(6.66, 0.9, 5.32)),
-    new THREE.Box3(new THREE.Vector3(5.09, -0.01, -14.91), new THREE.Vector3(6.31, 0.9, -12.56)),
-    new THREE.Box3(new THREE.Vector3(2.79, 0, 11.09), new THREE.Vector3(3.06, 12.38, 14.32)),
-    new THREE.Box3(new THREE.Vector3(2.85, 0, -0.38), new THREE.Vector3(3.13, 12.38, 2.85)),
-    new THREE.Box3(new THREE.Vector3(2.85, 0, -2.99), new THREE.Vector3(3.13, 12.38, -0.17)),
-    new THREE.Box3(new THREE.Vector3(0.11, 0, 14.04), new THREE.Vector3(3.02, 12.38, 15.93)),
-    new THREE.Box3(new THREE.Vector3(-5.51, 0, 13.91), new THREE.Vector3(-2.66, 12.38, 15.9)),
-    new THREE.Box3(new THREE.Vector3(-6.48, 0, 11.02), new THREE.Vector3(-5.21, 12.38, 14.17)),
-    new THREE.Box3(new THREE.Vector3(-2.87, 0, 15.39), new THREE.Vector3(0.28, 1.31, 16.05))
-  ];
-
   interface TownActivity {
     name: string;
     description: string;
@@ -73,53 +48,70 @@ export function initNPC(
     duration: number;
   }
 
-  // 5 Autonomous Town Activities
+  interface NPCDataConfig {
+    streetNodes?: [number, number, number][];
+    activities?: {
+      name: string;
+      description: string;
+      spot: [number, number, number];
+      facingAngle: number;
+      duration: number;
+    }[];
+    staticBoxes?: { min: [number, number, number]; max: [number, number, number] }[];
+  }
+
+  // Fallback defaults for immediate sync safety
   const activities: TownActivity[] = [
     {
-      name: "TOWN_WELL",
-      description: "Inspecting water supply and well pulley mechanism",
-      spot: new THREE.Vector3(10.5, 0, -5.5),
-      facingAngle: 0.0,
+      name: "Saloon Porch",
+      description: "Resting on the wooden boardwalk outside the Saloon",
+      spot: new THREE.Vector3(18.5, 0.45, -7.5),
+      facingAngle: -Math.PI / 2,
       duration: 8.0,
-    },
-    {
-      name: "GENERAL_STORE",
-      description: "Inspecting crates outside General Store",
-      spot: new THREE.Vector3(10.0, 0, 9.5),
-      facingAngle: Math.PI * 0.5,
-      duration: 9.0,
-    },
-    {
-      name: "CROSSROADS",
-      description: "Surveying street intersection between Bank and Sheriff",
-      spot: new THREE.Vector3(8.5, 0, 1.5),
-      facingAngle: -Math.PI * 0.5,
-      duration: 7.0,
-    },
-    {
-      name: "SALOON_BOARDWALK",
-      description: "Resting on Saloon porch listening to piano",
-      spot: new THREE.Vector3(11.5, 0, -13.5),
-      facingAngle: Math.PI * 0.5,
-      duration: 10.0,
-    },
-    {
-      name: "HOTEL_PLAZA",
-      description: "Observing town panorama from Hotel front plaza",
-      spot: new THREE.Vector3(9.5, 0, -21.0),
-      facingAngle: -Math.PI * 0.75,
-      duration: 8.5,
     },
   ];
 
-  // Intermediate safe road corridor nodes
   const streetNodes: THREE.Vector3[] = [
-    new THREE.Vector3(9.5, 0, -21.0),
-    new THREE.Vector3(10.5, 0, -13.5),
     new THREE.Vector3(10.0, 0, -5.5),
-    new THREE.Vector3(9.0, 0, 1.5),
-    new THREE.Vector3(10.0, 0, 9.5),
   ];
+
+  const staticBoxes: THREE.Box3[] = [];
+
+  // Load external NPC navigation, schedule, and collision data
+  fetch(dataUrl)
+    .then((res) => (res.ok ? res.json() : {}))
+    .then((data: NPCDataConfig) => {
+      if (data.streetNodes && data.streetNodes.length > 0) {
+        streetNodes.length = 0;
+        for (const n of data.streetNodes) {
+          streetNodes.push(new THREE.Vector3(...n));
+        }
+      }
+      if (data.activities && data.activities.length > 0) {
+        activities.length = 0;
+        for (const a of data.activities) {
+          activities.push({
+            name: a.name,
+            description: a.description,
+            spot: new THREE.Vector3(...a.spot),
+            facingAngle: a.facingAngle,
+            duration: a.duration,
+          });
+        }
+        if (currentTarget) {
+          currentTarget.copy(activities[0]!.spot);
+        }
+      }
+      if (data.staticBoxes && data.staticBoxes.length > 0) {
+        staticBoxes.length = 0;
+        for (const b of data.staticBoxes) {
+          staticBoxes.push(
+            new THREE.Box3(new THREE.Vector3(...b.min), new THREE.Vector3(...b.max))
+          );
+        }
+      }
+    })
+    .catch((err) => console.warn("Failed to load NPC data:", err));
 
   const currentPos = new THREE.Vector3(...initialPos);
   const targetRotation = new THREE.Quaternion();
@@ -206,6 +198,8 @@ export function initNPC(
     fadeToAction("Walk", 0.35);
   }
 
+  const gltfLoader = new GLTFLoader();
+
   // Skinned Model Instance
   // Load 3D Skinned Model
   createModelObject(
@@ -218,8 +212,30 @@ export function initNPC(
     },
     scene
   )
-    .then((obj) => {
+    .then(async (obj) => {
       model = obj;
+
+      // Load external walk animation from /models/movement/walk.glb (exported from walk.blend)
+      try {
+        const animGltf = await gltfLoader.loadAsync(walkAnimUrl);
+        if (animGltf.animations && animGltf.animations.length > 0) {
+          const walkClip = animGltf.animations[0]!;
+          walkClip.name = "Walk";
+          // Retain joint rotations and root hips translation; avoid child bone stretching
+          walkClip.tracks = walkClip.tracks.filter((t) => {
+            if (t.name.endsWith(".quaternion") || t.name.endsWith(".rotation")) return true;
+            if (t.name.toLowerCase().includes("hips") && (t.name.endsWith(".position") || t.name.endsWith(".translation"))) return true;
+            return false;
+          });
+          model.animations.set("Walk", walkClip);
+          if (state === "WALK") {
+            fadeToAction("Walk", 0.2);
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to load external walk animation:", err);
+      }
+
       fadeToAction("Idle", 0.1);
     })
     .catch((err) => console.warn("Failed to load NPC:", err));
@@ -276,6 +292,9 @@ export function initNPC(
         advanceToNextActivity();
       }
     } else if (state === "WALK") {
+      if (currentActionName !== "Walk") {
+        fadeToAction("Walk", 0.3);
+      }
       dirVec.copy(currentTarget).sub(currentPos);
       dirVec.y = 0;
       const dist = dirVec.length();
