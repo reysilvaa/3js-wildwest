@@ -6,7 +6,7 @@ export interface RainSystem {
 }
 
 export function initRain(scene: THREE.Scene, onThunder?: () => void): RainSystem {
-  const rainCount = 3500;
+  const rainCount = 1200;
   const rainGeo = new THREE.BufferGeometry();
   const rainPositions = new Float32Array(rainCount * 3);
   const rainVelocities = new Float32Array(rainCount);

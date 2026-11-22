@@ -131,7 +131,7 @@ export function initDesertGround(scene: THREE.Scene, options: GroundOptions = {}
   scene.add(mesh);
 
   // 3. Authentic Wild West Town Street Mud & Water Puddles
-  const streetGeo = new THREE.PlaneGeometry(54, 88, 32, 32);
+  const streetGeo = new THREE.PlaneGeometry(54, 88, 2, 2);
   streetGeo.rotateX(-Math.PI / 2);
   streetGeo.translate(10, 0.014, -7);
   streetGeo.setAttribute("uv2", streetGeo.getAttribute("uv"));

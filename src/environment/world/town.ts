@@ -68,6 +68,7 @@ export function loadWorld(
         for (const cfg of data.indoor) {
           const light = new THREE.PointLight(cfg.color, 0, cfg.distance, cfg.decay);
           light.position.set(...cfg.pos);
+          light.visible = false;
           scene.add(light);
           indoorLights.push({ light, maxIntensity: cfg.maxIntensity });
         }
@@ -77,6 +78,7 @@ export function loadWorld(
         for (const pos of data.lanterns) {
           const pl = new THREE.PointLight(0xffa34d, 0, 16, 2.0);
           pl.position.set(...pos);
+          pl.visible = false;
           scene.add(pl);
           porchLights.push(pl);
         }
@@ -87,6 +89,7 @@ export function loadWorld(
           const spot = new THREE.SpotLight(0xffbe6b, 0, cfg.distance, cfg.angle, cfg.penumbra, 2.0);
           spot.position.set(...cfg.origin);
           spot.target.position.set(...cfg.target);
+          spot.visible = false;
           scene.add(spot);
           scene.add(spot.target);
           windowSpillLights.push({ light: spot, maxIntensity: cfg.maxIntensity });
@@ -127,7 +130,13 @@ export function loadWorld(
               null;
           }
 
-          if (inst.asset !== "terrain") {
+          const BUILDING_ASSETS = new Set([
+            "hotel", "saloon", "bank", "sheriff", "store",
+            "office", "depot", "house", "settlement", "water_tower", "windmill"
+          ]);
+          const isBuilding = BUILDING_ASSETS.has(inst.asset);
+
+          if (isBuilding) {
             const wholeBox = new THREE.Box3().setFromObject(model);
             if (wholeBox.max.y - wholeBox.min.y > 0.4) {
               buildingBoxes.push(wholeBox);
@@ -139,13 +148,7 @@ export function loadWorld(
             if ((child as THREE.Mesh).isMesh) {
               const mesh = child as THREE.Mesh;
               mesh.receiveShadow = true;
-              if (inst.asset !== "terrain" && !mesh.name.includes("Cylinder005")) {
-                mesh.castShadow = true;
-                const box = new THREE.Box3().setFromObject(mesh);
-                if (box.max.y - box.min.y > 0.4) {
-                  buildingBoxes.push(box);
-                }
-              }
+              mesh.castShadow = isBuilding && !mesh.name.includes("Cylinder005");
               mesh.frustumCulled = true;
 
               // Configure PBR reflections for realistic sunlight & lamp bounce
@@ -222,18 +225,22 @@ export function loadWorld(
 
   function setIndoorLighting(factor: number): void {
     const clamped = Math.max(0, Math.min(1, factor));
+    const active = clamped > 0.01;
     for (const mat of windowMaterials) {
       mat.emissiveIntensity = clamped * 2.8;
       mat.emissive.setHex(0xffcb73);
     }
     for (const item of indoorLights) {
-      item.light.intensity = clamped * item.maxIntensity;
+      item.light.visible = active;
+      if (active) item.light.intensity = clamped * item.maxIntensity;
     }
     for (const pl of porchLights) {
-      pl.intensity = clamped * 2.2;
+      pl.visible = active;
+      if (active) pl.intensity = clamped * 2.2;
     }
     for (const beam of windowSpillLights) {
-      beam.light.intensity = clamped * beam.maxIntensity;
+      beam.light.visible = active;
+      if (active) beam.light.intensity = clamped * beam.maxIntensity;
     }
   }
 
