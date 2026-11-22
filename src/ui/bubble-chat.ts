@@ -28,83 +28,47 @@ export function initBubbleChat(): BubbleChatSystem {
   if (!container) {
     container = document.createElement("div");
     container.id = "npc-chat-bubbles";
-    container.style.position = "absolute";
-    container.style.top = "0";
-    container.style.left = "0";
-    container.style.width = "100%";
-    container.style.height = "100%";
-    container.style.pointerEvents = "none";
-    container.style.overflow = "hidden";
-    container.style.zIndex = "40";
+    container.className = "absolute inset-0 pointer-events-none overflow-hidden z-30";
     document.body.appendChild(container);
   }
 
-  // Inject vintage Western speech bubble styles
-  const styleId = "npc-chat-bubbles-style";
+  // Inject custom parchment speech bubble tail & corner styles that supplement Tailwind
+  const styleId = "npc-chat-parchment-styles";
   if (!document.getElementById(styleId)) {
     const style = document.createElement("style");
     style.id = styleId;
     style.textContent = `
-      .npc-speech-bubble {
-        position: absolute;
-        max-width: 210px;
-        background: linear-gradient(135deg, #fdf9ee 0%, #faeccb 100%);
-        border: 2px solid #4a2f19;
-        border-radius: 10px;
-        padding: 7px 12px;
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.8);
-        font-family: 'Georgia', 'Palatino', serif;
-        color: #2b1708;
-        pointer-events: none;
-        transform: translate(-50%, -100%);
-        transition: opacity 0.25s ease, transform 0.25s ease;
-        opacity: 0;
-        z-index: 50;
+      .parchment-bubble {
+        background-color: #eeddb7;
+        background-image: 
+          radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.45) 0%, transparent 80%),
+          linear-gradient(165deg, #fef8eb 0%, #ecd8a5 55%, #d5b577 100%);
       }
-      .npc-speech-bubble.visible {
-        opacity: 1;
-        transform: translate(-50%, -100%) scale(1);
-      }
-      .npc-speech-bubble::after {
+      .parchment-tail::after {
         content: '';
         position: absolute;
-        bottom: -9px;
+        bottom: -11px;
         left: 50%;
         transform: translateX(-50%);
-        border-width: 9px 8px 0 8px;
+        border-width: 11px 9px 0 9px;
         border-style: solid;
-        border-color: #4a2f19 transparent transparent transparent;
+        border-color: #4e280f transparent transparent transparent;
         display: block;
         width: 0;
+        z-index: 10;
       }
-      .npc-speech-bubble::before {
+      .parchment-tail::before {
         content: '';
         position: absolute;
-        bottom: -6px;
+        bottom: -8px;
         left: 50%;
         transform: translateX(-50%);
-        border-width: 7px 6px 0 6px;
+        border-width: 9px 7px 0 7px;
         border-style: solid;
-        border-color: #faeccb transparent transparent transparent;
+        border-color: #ecd8a5 transparent transparent transparent;
         display: block;
         width: 0;
-        z-index: 1;
-      }
-      .npc-speech-name {
-        font-size: 10px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.6px;
-        color: #7d4416;
-        margin-bottom: 2px;
-        border-bottom: 1px dotted rgba(74, 47, 25, 0.3);
-        padding-bottom: 2px;
-      }
-      .npc-speech-text {
-        font-size: 12.5px;
-        line-height: 1.35;
-        font-weight: 500;
-        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+        z-index: 11;
       }
     `;
     document.head.appendChild(style);
@@ -118,7 +82,7 @@ export function initBubbleChat(): BubbleChatSystem {
     speaker: string,
     text: string,
     getWorldPosition: () => THREE.Vector3,
-    duration = 4.5
+    duration = 4.8
   ) {
     if (!container) return;
 
@@ -132,16 +96,28 @@ export function initBubbleChat(): BubbleChatSystem {
     }
 
     const bubbleEl = document.createElement("div");
-    bubbleEl.className = "npc-speech-bubble";
+    // Tailwind classes matching the authentic aged Western parchment reference image
+    bubbleEl.className =
+      "parchment-bubble parchment-tail absolute max-w-[240px] min-w-[140px] p-2.5 rounded-xl border-2 border-[#4e280f] shadow-bubble text-[#2a1306] pointer-events-none -translate-x-1/2 -translate-y-full opacity-0 scale-90 transition-all duration-300 ease-out z-40";
+
     bubbleEl.innerHTML = `
-      <div class="npc-speech-name">${speaker}</div>
-      <div class="npc-speech-text">${text}</div>
+      <div class="relative p-0.5 border border-[#cba043]/60 rounded-lg">
+        <div class="flex items-center justify-between border-b border-[#4e280f]/25 pb-1 mb-1">
+          <span class="text-[9px] text-[#cba043]">★</span>
+          <span class="font-western text-[10px] uppercase tracking-widest text-[#663511] font-bold">${speaker}</span>
+          <span class="text-[9px] text-[#cba043]">★</span>
+        </div>
+        <div class="font-parchment text-[13px] leading-snug font-semibold text-[#251206] px-1 py-0.5 italic drop-shadow-[0_1px_0_rgba(255,255,255,0.7)] text-center">
+          "${text}"
+        </div>
+      </div>
     `;
     container.appendChild(bubbleEl);
 
-    // Trigger enter transition
+    // Smooth entrance pop-in
     requestAnimationFrame(() => {
-      bubbleEl.classList.add("visible");
+      bubbleEl.classList.remove("opacity-0", "scale-90");
+      bubbleEl.classList.add("opacity-100", "scale-100");
     });
 
     activeBubbles.set(npcId, {
@@ -161,10 +137,12 @@ export function initBubbleChat(): BubbleChatSystem {
     const height = window.innerHeight;
 
     for (const [npcId, bubble] of activeBubbles.entries()) {
-      bubble.timer -= 0.016; // Average frame step
+      bubble.timer -= 0.016;
 
-      if (bubble.timer <= 0.3) {
-        bubble.element.classList.remove("visible");
+      // Smooth fade-out in last 0.35s
+      if (bubble.timer <= 0.35) {
+        bubble.element.classList.remove("opacity-100", "scale-100");
+        bubble.element.classList.add("opacity-0", "scale-95");
       }
 
       if (bubble.timer <= 0) {
@@ -175,15 +153,15 @@ export function initBubbleChat(): BubbleChatSystem {
         continue;
       }
 
-      // Calculate 3D position above head (height offset ~1.68m)
+      // Calculate 3D position above head (height offset ~1.72m)
       const worldPos = bubble.getWorldPosition();
       projVec.copy(worldPos);
-      projVec.y += 1.65;
+      projVec.y += 1.72;
 
       const dist = projVec.distanceTo(camera.position);
 
-      // Distance culling: hide if beyond 30 meters
-      if (dist > 30.0) {
+      // Distance culling: hide if beyond 32 meters
+      if (dist > 32.0) {
         bubble.element.style.display = "none";
         continue;
       }
@@ -200,12 +178,12 @@ export function initBubbleChat(): BubbleChatSystem {
       const screenX = (projVec.x * 0.5 + 0.5) * width;
       const screenY = (-(projVec.y * 0.5) + 0.5) * height;
 
-      // Scale gently with distance (1.0 at 5m, 0.72 at 25m)
-      const scale = Math.max(0.68, Math.min(1.08, 1.15 - dist * 0.018));
+      // Distance scaling: 1.0 at 5m, 0.75 at 25m
+      const scale = Math.max(0.72, Math.min(1.08, 1.15 - dist * 0.018));
 
       bubble.element.style.display = "block";
       bubble.element.style.left = `${screenX}px`;
-      bubble.element.style.top = `${screenY - 12}px`;
+      bubble.element.style.top = `${screenY - 14}px`;
       bubble.element.style.transform = `translate(-50%, -100%) scale(${scale})`;
     }
   }

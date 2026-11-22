@@ -4,83 +4,135 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Wild West Town - Three.js</title>
+    <!-- Google Fonts: Authentic 19th Century Western Woodtype & Engraved Serif -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Playfair+Display:ital,wght@0,600;0,700;0,900;1,600&family=Rye&family=Special+Elite&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Tailwind CSS Engine -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              parchment: {
+                light: '#fdf8ea',
+                DEFAULT: '#f3e3be',
+                dark: '#d9be85',
+                burnt: '#825626',
+              },
+              leather: {
+                light: '#844d24',
+                DEFAULT: '#4e280f',
+                dark: '#2a1306',
+              },
+              brass: {
+                light: '#f5d580',
+                DEFAULT: '#cba043',
+                dark: '#7e5d17',
+              },
+            },
+            fontFamily: {
+              western: ['Rye', 'serif'],
+              cinzel: ['Cinzel', 'serif'],
+              parchment: ['"Playfair Display"', 'Georgia', 'serif'],
+              typewriter: ['"Special Elite"', 'monospace'],
+            },
+            boxShadow: {
+              western: '0 4px 16px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 0 12px rgba(90, 45, 15, 0.25)',
+              frame: '0 8px 24px rgba(0, 0, 0, 0.8), 0 2px 4px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.6)',
+              bubble: '0 10px 25px -3px rgba(0, 0, 0, 0.6), 0 4px 8px -2px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
+            },
+          },
+        },
+      };
+    </script>
     <style>
       html,
       body {
         margin: 0;
         height: 100%;
         overflow: hidden;
-        background: #1a140e;
+        background: #140d07;
         font-family: system-ui, -apple-system, sans-serif;
       }
       canvas {
         display: block;
       }
-      #loading {
+      /* Vintage Western filigree corner decorations */
+      .western-corners::before,
+      .western-corners::after {
+        content: '❖';
         position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        color: #f5deb3;
-        text-align: center;
-        pointer-events: none;
-        transition: opacity 0.5s ease;
+        font-size: 9px;
+        color: #cba043;
+        opacity: 0.85;
       }
-      #loading .bar {
-        width: 240px;
-        height: 6px;
-        background: rgba(255, 255, 255, 0.15);
-        border-radius: 3px;
-        margin-top: 10px;
-        overflow: hidden;
+      .western-corners::before {
+        top: 2px;
+        left: 4px;
       }
-      #loading .fill {
-        width: 0%;
-        height: 100%;
-        background: #e59b3c;
-        transition: width 0.2s ease;
-      }
-      #info {
-        position: absolute;
-        top: 16px;
-        left: 16px;
-        color: rgba(255, 255, 255, 0.85);
-        background: rgba(20, 15, 10, 0.65);
-        padding: 8px 14px;
-        border-radius: 8px;
-        font-size: 13px;
-        pointer-events: none;
-        backdrop-filter: blur(4px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-      }
-      .wasd-indicator {
-        position: absolute;
-        top: 56px;
-        right: 16px;
-        background: rgba(0, 0, 0, 0.7);
-        padding: 6px 10px;
-        border-radius: 6px;
-        font-size: 11px;
-        color: #f5deb3;
-        line-height: 1.4;
-        white-space: nowrap;
-        opacity: 0;
-        transition: opacity 0.3s ease;
-      }
-      .wasd-indicator.visible {
-        opacity: 1;
+      .western-corners::after {
+        top: 2px;
+        right: 4px;
       }
     </style>
   </head>
-  <body>
-    <div id="loading">
-      <div id="status-text">Loading Wild West Town...</div>
-      <div class="bar"><div id="progress" class="fill"></div></div>
+  <body class="relative w-full h-full select-none">
+    <!-- Western Loading Screen -->
+    <div
+      id="loading"
+      class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none transition-opacity duration-500 z-50 flex flex-col items-center"
+    >
+      <div class="px-6 py-4 rounded-xl bg-gradient-to-b from-[#eedcb5] via-[#e2c796] to-[#cfb078] border-2 border-[#4e280f] shadow-frame relative western-corners min-w-[280px]">
+        <div class="text-[10px] font-cinzel uppercase tracking-[0.25em] text-[#844d24] font-bold mb-1">
+          ★ Frontier Settlement ★
+        </div>
+        <div id="status-text" class="text-xl font-western text-[#2a1306] tracking-wider drop-shadow-sm">
+          WILD WEST TOWN
+        </div>
+        <div class="w-full h-3 bg-[#2a1306]/40 rounded-full mt-3 p-0.5 border border-[#4e280f]/50 overflow-hidden shadow-inner">
+          <div id="progress" class="h-full bg-gradient-to-r from-[#cba043] via-[#f5d580] to-[#cba043] rounded-full transition-all duration-200 shadow" style="width: 0%"></div>
+        </div>
+        <div class="text-[10px] font-cinzel text-[#4e280f]/80 tracking-widest mt-2 uppercase">
+          Saddle Up &amp; Stay Awhile
+        </div>
+      </div>
     </div>
-    <div id="info">
-      <strong>Wild West Town</strong> &bull; Drag to rotate &bull; [N] Night/Day &bull; [R] Rain &bull; [C] Cycle &bull; [M] BGM
+
+    <!-- Western Info Badge (Top-Left) -->
+    <div
+      id="info"
+      class="absolute top-4 left-4 z-40 pointer-events-none flex flex-col gap-1 p-3 rounded-lg bg-gradient-to-b from-[#fdf8ea] via-[#f3e3be] to-[#d9be85] border-2 border-[#4e280f] shadow-western text-[#2a1306] max-w-sm western-corners"
+    >
+      <div class="flex items-center gap-2 border-b border-[#4e280f]/25 pb-1">
+        <span class="text-xs text-[#cba043]">★</span>
+        <span class="font-western text-sm text-[#2a1306] tracking-wider uppercase">Wild West Town</span>
+        <span class="text-xs text-[#cba043]">★</span>
+        <span class="text-[10px] font-cinzel text-[#844d24] font-bold tracking-widest ml-auto">EST. 1885</span>
+      </div>
+      <div class="text-[11.5px] font-parchment leading-tight text-[#3b1d09] mt-0.5 flex flex-wrap gap-x-2 gap-y-1">
+        <span><strong class="font-bold text-[#2a1306]">[N]</strong> Day/Night</span>
+        <span>&bull;</span>
+        <span><strong class="font-bold text-[#2a1306]">[R]</strong> Rain</span>
+        <span>&bull;</span>
+        <span><strong class="font-bold text-[#2a1306]">[C]</strong> Cycle</span>
+        <span>&bull;</span>
+        <span><strong class="font-bold text-[#2a1306]">[M]</strong> Sound</span>
+      </div>
     </div>
-    <div id="wasd-indicator" class="wasd-indicator">WASD: Move camera</div>
+
+    <!-- WASD Navigation Hint -->
+    <div
+      id="wasd-indicator"
+      class="wasd-indicator absolute top-24 left-4 z-40 bg-gradient-to-b from-[#fdf8ea] to-[#ebd49f] border border-[#4e280f] px-3 py-1 rounded shadow-md text-[11px] font-cinzel font-bold text-[#2a1306] tracking-wider uppercase opacity-0 transition-opacity duration-300 pointer-events-none"
+    >
+      WASD: Move &bull; Mouse: Rotate
+    </div>
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

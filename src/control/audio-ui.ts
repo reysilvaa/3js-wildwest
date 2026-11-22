@@ -10,31 +10,12 @@ export function initAudioUI(handlers: AudioUIHandlers): { update: () => void } {
   if (!audioBtn) {
     audioBtn = document.createElement("button");
     audioBtn.id = "btn-audio";
-    audioBtn.innerHTML = "🔊 Sound: On";
+    audioBtn.innerHTML = "❖ AUDIO: ON";
     audioBtn.title = "Toggle Sound & Music (Shortcut: M)";
-    audioBtn.style.cssText = `
-      background: rgba(20, 15, 10, 0.7);
-      color: #fff;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 8px;
-      padding: 8px 12px;
-      font-size: 13px;
-      cursor: pointer;
-      backdrop-filter: blur(6px);
-      transition: all 0.2s ease;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      user-select: none;
-    `;
-    audioBtn.addEventListener("mouseenter", () => {
-      audioBtn!.style.background = "rgba(45, 35, 25, 0.9)";
-      audioBtn!.style.borderColor = "rgba(229, 155, 60, 0.5)";
-    });
-    audioBtn.addEventListener("mouseleave", () => {
-      audioBtn!.style.background = "rgba(20, 15, 10, 0.7)";
-      audioBtn!.style.borderColor = "rgba(255, 255, 255, 0.15)";
-    });
+    // Tailwind classes matching the Western carved parchment button style
+    audioBtn.className =
+      "relative px-3.5 py-1.5 rounded-lg bg-gradient-to-b from-[#fdf8ea] via-[#f3e3be] to-[#d9be85] border border-[#542e14] shadow-western text-[#2a1306] font-western text-[11px] tracking-wider uppercase flex items-center justify-center gap-1.5 hover:from-white hover:to-[#ebd49f] hover:border-[#cba043] hover:shadow-[0_0_12px_rgba(203,160,67,0.6)] active:scale-95 transition-all duration-150 cursor-pointer select-none";
+
     audioBtn.addEventListener("click", () => {
       handlers.onToggleMute();
       update();
@@ -53,8 +34,12 @@ export function initAudioUI(handlers: AudioUIHandlers): { update: () => void } {
   function update(): void {
     if (audioBtn) {
       const muted = handlers.isMuted();
-      audioBtn.innerHTML = muted ? "🔇 Sound: Off" : "🔊 Sound: On";
-      audioBtn.style.color = muted ? "#888" : "#fff";
+      audioBtn.innerHTML = muted ? "❖ AUDIO: OFF" : "❖ AUDIO: ON";
+      if (muted) {
+        audioBtn.classList.add("opacity-60", "grayscale");
+      } else {
+        audioBtn.classList.remove("opacity-60", "grayscale");
+      }
     }
   }
 
