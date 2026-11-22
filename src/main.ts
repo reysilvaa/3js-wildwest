@@ -33,11 +33,12 @@ const tumbleweeds = initTumbleweeds(scene);
 const weather = initWeather(scene, sunLight, hemiLight, {
   camera,
   buildingBoxes,
-  onTimeChange: (time) => audio.setDayTime(time !== "night"),
+  onTimeChange: (time) => audio.setTimeOfDay(time),
   onConditionChange: (condition) => audio.setRain(condition === "rain"),
   onThunder: () => audio.playThunder(),
   onIndoorLightChange: (intensity) => world.setIndoorLighting(intensity),
 });
+audio.setTimeOfDay(weather.getState().timeOfDay);
 
 // 6. Sound Toggle UI (integrated into header bar)
 initAudioUI({
@@ -72,7 +73,7 @@ const npcs = NPC_SPAWN_SPOTS.map((pos, i) =>
 );
 
 // 8. Inter-NPC Speech Bubble & Autonomous AI Dialogue System
-const bubbleChat = initBubbleChat();
+const bubbleChat = initBubbleChat({ camera, headOffsetY: 1.45 });
 const conversations = initConversationManager(npcs, bubbleChat);
 
 // Diagnostic quick-inspection hook on window
@@ -85,6 +86,10 @@ const conversations = initConversationManager(npcs, bubbleChat);
 (window as unknown as Record<string, unknown>).sayBubble = (i = 0, text = "Howdy partner!") => {
   const npc = npcs[i];
   if (npc) bubbleChat.showBubble(npc.id, npc.name, text, () => npc.getPosition());
+};
+(window as unknown as Record<string, unknown>).setBubbleOffset = (y = 1.45) => {
+  bubbleChat.setHeadOffset(y);
+  console.log(`[BubbleChat] Head vertical offset updated to: ${y}m`);
 };
 (window as unknown as Record<string, unknown>).inspectNPC = (index = 0) => {
   const npc = npcs[index];
@@ -112,7 +117,7 @@ function animate() {
     npcs[i]?.update(dt);
   }
   conversations.update(dt);
-  bubbleChat.update(camera);
+  bubbleChat.update(camera, dt);
   tumbleweeds.update(dt, buildingBoxes);
   clouds.update(dt, weather.getState());
   controls.update();
