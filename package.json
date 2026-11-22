@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "asset:validate": "node scripts/asset-prep.mjs validate",
+    "asset:prep": "node scripts/asset-prep.mjs prep",
+    "asset:modular": "node scripts/asset-prep.mjs modular"
   },
   "dependencies": {
     "three": "^0.187.0"

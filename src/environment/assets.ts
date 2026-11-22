@@ -39,9 +39,13 @@ export const ASSET_MAP = {
   npc_armature: "/models/npc/modular/armature/armature.glb",
   npc_head_default: "/models/npc/modular/heads/head_default.glb",
   npc_head_cowboy: "/models/npc/modular/heads/cowboy_head.glb",
+  npc_head_outlaw: "/models/npc/modular/heads/outlaw_head.glb",
   npc_hair_default: "/models/npc/modular/hair/hair_default.glb",
   npc_body_hands: "/models/npc/modular/bodies/body_hands.glb",
   npc_outfit_suit: "/models/npc/modular/outfits/outfit_suit.glb",
+  npc_outfit_arthur: "/models/npc/modular/outfits/outfit_arthur.glb",
+  npc_acc_cowboy_hat: "/models/npc/modular/accessories/cowboy_hat.glb",
+  npc_acc_gun_holster: "/models/npc/modular/accessories/gun_holster.glb",
 } as const;
 
 export type AssetKey = keyof typeof ASSET_MAP;

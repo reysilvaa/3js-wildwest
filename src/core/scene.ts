@@ -40,7 +40,7 @@ export function initScene(options: SceneOptions = {}): SceneContext {
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.0));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.1;
+  renderer.toneMappingExposure = 1.15;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.shadowMap.autoUpdate = true;
@@ -54,7 +54,8 @@ export function initScene(options: SceneOptions = {}): SceneContext {
   controls.maxDistance = 70;
   controls.target.set(10, 1.5, 5);
 
-  const hemiLight = new THREE.HemisphereLight(0xffe2b8, 0x8a6a4b, 1.2);
+  // Warm western hemisphere light: sky warm gold, ground warm desert sand bounce
+  const hemiLight = new THREE.HemisphereLight(0xffeedd, 0xd4a578, 1.4);
   hemiLight.position.set(0, 50, 0);
   scene.add(hemiLight);
 

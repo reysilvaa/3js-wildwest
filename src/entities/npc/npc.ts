@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { createModelObject, ModelObject } from "../../core/models.js";
-import { assembleModularCharacter } from "./modular.js";
+import { assembleModularCharacter, getRandomModularConfig } from "./modular.js";
 import { getGroundElevation } from "../../environment/terrain/height.js";
 import type { AssetKey } from "../../environment/assets.js";
 
@@ -11,8 +11,10 @@ export interface NPCOptions {
   name?: string;
   modelKey?: AssetKey;
   useModular?: boolean;
-  modularHead?: "cowboy" | "jokowi" | "random";
-  modularOutfit?: "suit" | "random";
+  modularHead?: "cowboy" | "outlaw" | "jokowi" | "arthur" | "random";
+  modularOutfit?: "suit" | "cowboy" | "arthur" | "random";
+  modularAccessory?: "cowboy_hat" | "arthur_hat" | "none" | "random";
+  outfitColor?: number | THREE.Color;
   initialPos?: [number, number, number];
   buildingBoxes?: THREE.Box3[];
   camera?: THREE.Camera;
@@ -45,6 +47,8 @@ export function initNPC(
     useModular = true,
     modularHead = "random",
     modularOutfit: _modularOutfit,
+    modularAccessory = "random",
+    outfitColor,
     initialPos = [10.0, 0.0, -10.0],
     walkSpeed = 1.15,
     dataUrl = "/models/npc_data.json",
@@ -283,20 +287,43 @@ export function initNPC(
 
   // Skinned Model Instance
   // Load 3D Skinned Model (Human scale 0.85 to fit modular buildings & doorframes)
-  let headUrl = "/models/npc/modular/heads/cowboy_head.glb";
+  const randConfig = getRandomModularConfig();
+  let headUrl = randConfig.headUrl;
   if (modularHead === "jokowi") {
     headUrl = "/models/npc/modular/heads/head_default.glb";
+  } else if (modularHead === "arthur") {
+    headUrl = "/models/npc/modular/heads/arthur_head.glb";
   } else if (modularHead === "cowboy") {
     headUrl = "/models/npc/modular/heads/cowboy_head.glb";
-  } else if (modularHead === "random") {
-    headUrl = Math.random() < 0.5 ? "/models/npc/modular/heads/cowboy_head.glb" : "/models/npc/modular/heads/head_default.glb";
+  } else if (modularHead === "outlaw") {
+    headUrl = "/models/npc/modular/heads/outlaw_head.glb";
   }
+
+  let accessoryUrl = randConfig.accessoryUrl;
+  let bandanaUrl = randConfig.bandanaUrl;
+  if (modularAccessory === "cowboy_hat") {
+    accessoryUrl = "/models/npc/modular/accessories/arthur_hat.glb";
+  } else if (modularAccessory === "none") {
+    accessoryUrl = "";
+  }
+  // Heads that already include modeled accessories (hat & neck scarf) never get accessory overlays
+  if (headUrl.includes("cowboy_head") || headUrl.includes("outlaw_head")) {
+    accessoryUrl = "";
+    bandanaUrl = "";
+  }
+
+  const finalColor = outfitColor ?? randConfig.outfitColor;
 
   const modelPromise: Promise<ModelObject> = (useModular || !modelKey)
     ? assembleModularCharacter({
         headUrl,
-        outfitUrl: "/models/npc/modular/outfits/outfit_suit.glb",
+        outfitUrl: randConfig.outfitUrl,
         bodyUrl: "/models/npc/modular/bodies/body_hands.glb",
+        accessoryUrl,
+        bandanaUrl,
+        holsterUrl: randConfig.holsterUrl,
+        bootsUrl: randConfig.bootsUrl,
+        outfitColor: finalColor,
       }, {
         position: currentPos,
         scale,
@@ -344,7 +371,11 @@ export function initNPC(
         console.warn("Failed to load external walk animation:", err);
       }
 
-      fadeToAction("Idle", 0.1);
+      // Only fade to Idle if a clip is available — Walk clip is used as the base animation.
+      // If animations Map is empty (walk load failed), skip to avoid stuck A-pose with no clip.
+      if (obj.animations.size > 0) {
+        fadeToAction("Walk", 0.1);
+      }
     })
     .catch((err: unknown) => console.warn("Failed to load NPC:", err));
 

@@ -8,6 +8,7 @@ import { loadWorld } from "./environment/world/town.js";
 import { initClouds } from "./environment/weather/clouds.js";
 import { initWeather } from "./environment/weather/weather.js";
 import { initNPC } from "./entities/npc/npc.js";
+import { inspectNPC } from "./entities/npc/modular.js";
 import { initTumbleweeds } from "./entities/tumbleweed.js";
 
 // 1. Scene, Camera, Renderer, Controls & Lighting
@@ -59,6 +60,7 @@ const npcs = NPC_SPAWN_SPOTS.map((pos, i) =>
     name: NPC_NAMES[i] ?? `Resident ${i + 1}`,
     useModular: true,
     modularHead: "random",
+    modularAccessory: "random",
     initialPos: pos,
     scale: 0.83 + (i % 3) * 0.025,
     walkSpeed: 1.02 + (i % 4) * 0.05,
@@ -66,6 +68,18 @@ const npcs = NPC_SPAWN_SPOTS.map((pos, i) =>
     startActivityIndex: i,
   })
 );
+
+// Diagnostic quick-inspection hook on window
+(window as unknown as Record<string, unknown>).__npcs = npcs;
+(window as unknown as Record<string, unknown>).inspectNPC = (index = 0) => {
+  const npc = npcs[index];
+  if (!npc || !npc.model) {
+    console.warn(`[inspectNPC] NPC ${index} model not loaded yet (total: ${npcs.length})`);
+    return;
+  }
+  console.log(`%c=== Inspecting NPC ${index} (${npc.getState()}) ===`, "color: #ffaa00; font-weight: bold;");
+  return inspectNPC(npc.model);
+};
 
 // 8. Clean Declarative Game Loop
 const clock = new THREE.Clock();
