@@ -29,7 +29,7 @@ const audio = initAudio();
 
 // Initialize Dynamic Weather System (Day/Night cycle, Rain particles, Lightning, Audio synchronization, Indoor lighting)
 const weather = initWeather(scene, sunLight, hemiLight, flare, {
-  onTimeChange: (time) => audio.setDayTime(time === "day"),
+  onTimeChange: (time) => audio.setDayTime(time !== "night"),
   onConditionChange: (condition) => audio.setRain(condition === "rain"),
   onThunder: () => audio.playThunder(),
   onIndoorLightChange: (intensity) => world.setIndoorLighting(intensity),
@@ -97,7 +97,7 @@ function animate() {
   audio.update(dt);
   npc.update(dt);
   tumbleweeds.update(dt, buildingBoxes);
-  clouds.update(dt);
+  clouds.update(dt, weather.getState());
   controls.update();
 
   renderer.render(scene, camera);

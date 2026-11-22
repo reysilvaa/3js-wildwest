@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { Lensflare } from "three/addons/objects/Lensflare.js";
 
-export type TimeOfDay = "day" | "night";
+export type TimeOfDay = "day" | "sunset" | "night";
 export type WeatherCondition = "clear" | "rain";
 
 export interface WeatherOptions {
@@ -111,28 +111,52 @@ export function initWeather(
       sunPos: new THREE.Vector3(20, 35, -15),
       rainOpacity: 0.75,
     },
-    nightClear: {
-      bg: new THREE.Color(0x0a0f1d),
-      fog: new THREE.Color(0x0a0f1d),
+    sunsetClear: {
+      bg: new THREE.Color(0xb84a28),
+      fog: new THREE.Color(0x9e3f22),
       fogDensity: 0.012,
-      sunColor: new THREE.Color(0x6a86ad),
-      sunIntensity: 0.35,
-      hemiSky: new THREE.Color(0x152238),
-      hemiGround: new THREE.Color(0x090d14),
+      sunColor: new THREE.Color(0xff6e26),
+      sunIntensity: 2.2,
+      hemiSky: new THREE.Color(0xd25b38),
+      hemiGround: new THREE.Color(0x4a2418),
+      hemiIntensity: 0.85,
+      sunPos: new THREE.Vector3(50, 4.0, -15),
+      rainOpacity: 0,
+    },
+    sunsetRain: {
+      bg: new THREE.Color(0x4a2a2e),
+      fog: new THREE.Color(0x422428),
+      fogDensity: 0.024,
+      sunColor: new THREE.Color(0xb55338),
+      sunIntensity: 0.6,
+      hemiSky: new THREE.Color(0x563035),
+      hemiGround: new THREE.Color(0x2a171a),
+      hemiIntensity: 0.55,
+      sunPos: new THREE.Vector3(40, 5.0, -12),
+      rainOpacity: 0.75,
+    },
+    nightClear: {
+      bg: new THREE.Color(0x070b16),
+      fog: new THREE.Color(0x070b16),
+      fogDensity: 0.012,
+      sunColor: new THREE.Color(0x8eaed6),
+      sunIntensity: 0.45,
+      hemiSky: new THREE.Color(0x121b2d),
+      hemiGround: new THREE.Color(0x080c14),
       hemiIntensity: 0.25,
-      sunPos: new THREE.Vector3(-25, 40, 15),
+      sunPos: new THREE.Vector3(-35, 45, 25),
       rainOpacity: 0,
     },
     nightRain: {
       bg: new THREE.Color(0x05070e),
       fog: new THREE.Color(0x05070e),
       fogDensity: 0.026,
-      sunColor: new THREE.Color(0x32475e),
-      sunIntensity: 0.15,
+      sunColor: new THREE.Color(0x3a4c62),
+      sunIntensity: 0.2,
       hemiSky: new THREE.Color(0x0c121e),
       hemiGround: new THREE.Color(0x04060a),
       hemiIntensity: 0.15,
-      sunPos: new THREE.Vector3(-20, 30, 10),
+      sunPos: new THREE.Vector3(-25, 35, 18),
       rainOpacity: 0.8,
     },
   };
@@ -143,6 +167,8 @@ export function initWeather(
   function getCurrentPreset() {
     if (timeOfDay === "day") {
       return condition === "clear" ? presets.dayClear : presets.dayRain;
+    } else if (timeOfDay === "sunset") {
+      return condition === "clear" ? presets.sunsetClear : presets.sunsetRain;
     } else {
       return condition === "clear" ? presets.nightClear : presets.nightRain;
     }
@@ -161,7 +187,9 @@ export function initWeather(
   }
 
   function toggleTimeOfDay() {
-    timeOfDay = timeOfDay === "day" ? "night" : "day";
+    if (timeOfDay === "day") timeOfDay = "sunset";
+    else if (timeOfDay === "sunset") timeOfDay = "night";
+    else timeOfDay = "day";
     updateUI();
     options.onTimeChange?.(timeOfDay);
   }
@@ -233,9 +261,9 @@ export function initWeather(
   document.body.appendChild(uiContainer);
 
   function updateUI() {
-    timeBtn.innerHTML = timeOfDay === "day" ? "☀️ Day" : "🌙 Night";
+    timeBtn.innerHTML = timeOfDay === "day" ? "☀️ Day" : timeOfDay === "sunset" ? "🌅 Sunset" : "🌙 Night";
     weatherBtn.innerHTML = condition === "clear" ? "🌤️ Clear" : "🌧️ Rain";
-    cycleBtn.innerHTML = autoCycle ? "⏱️ Cycle: On" : "⏱️ Cycle: Off";
+    cycleBtn.innerHTML = autoCycle ? "⏱️ Cycle: 120s" : "⏱️ Cycle: Off";
     cycleBtn.style.color = autoCycle ? "#e59b3c" : "#fff";
   }
 
@@ -251,19 +279,26 @@ export function initWeather(
   const tempColor = new THREE.Color();
 
   function update(dt: number) {
-    // Auto day-night cycle (45 seconds per full cycle)
+    // Auto day-night cycle (120s full period: Day 0-48s -> Sunset 48-72s -> Night 72-120s)
     if (autoCycle) {
-      cycleTimer += dt;
-      if (cycleTimer > 25) {
-        cycleTimer = 0;
-        timeOfDay = timeOfDay === "day" ? "night" : "day";
+      cycleTimer = (cycleTimer + dt) % 120;
+      let newTime: TimeOfDay = "day";
+      if (cycleTimer >= 48 && cycleTimer < 72) {
+        newTime = "sunset";
+      } else if (cycleTimer >= 72) {
+        newTime = "night";
+      } else {
+        newTime = "day";
+      }
+      if (newTime !== timeOfDay) {
+        timeOfDay = newTime;
         updateUI();
         options.onTimeChange?.(timeOfDay);
       }
     }
 
     const p = getCurrentPreset();
-    const lerpSpeed = 2.5 * dt;
+    const lerpSpeed = 1.5 * dt;
 
     // Smooth background & fog interpolation
     if (scene.background instanceof THREE.Color) {
@@ -275,7 +310,7 @@ export function initWeather(
       fog.density += (p.fogDensity - fog.density) * lerpSpeed;
     }
 
-    // Smooth lighting transition
+    // Smooth lighting transition (Sun arching down into Sunset, then Moon rising)
     sunLight.color.lerp(p.sunColor, lerpSpeed);
     sunLight.intensity += (p.sunIntensity - sunLight.intensity) * lerpSpeed;
     sunLight.position.lerp(p.sunPos, lerpSpeed);
@@ -284,24 +319,26 @@ export function initWeather(
     hemiLight.groundColor.lerp(p.hemiGround, lerpSpeed);
     hemiLight.intensity += (p.hemiIntensity - hemiLight.intensity) * lerpSpeed;
 
-    // Indoor room lighting: activated during dark conditions (night & rain)
+    // Indoor room & porch lighting: activated during sunset, night & rain
     let targetIndoorLight = 0;
     if (timeOfDay === "night" && condition === "rain") {
       targetIndoorLight = 1.0;
     } else if (timeOfDay === "night") {
       targetIndoorLight = 0.85;
+    } else if (timeOfDay === "sunset") {
+      targetIndoorLight = 0.45;
     } else if (condition === "rain") {
       targetIndoorLight = 0.65;
     } else {
       targetIndoorLight = 0.0;
     }
 
-    currentIndoorLight += (targetIndoorLight - currentIndoorLight) * (2.5 * dt);
+    currentIndoorLight += (targetIndoorLight - currentIndoorLight) * (2.0 * dt);
     options.onIndoorLightChange?.(currentIndoorLight);
 
-    // Lensflare only active in clear daylight
+    // Lensflare active during clear day and sunset (softens at sunset)
     if (flare) {
-      const shouldFlare = timeOfDay === "day" && condition === "clear";
+      const shouldFlare = condition === "clear" && (timeOfDay === "day" || timeOfDay === "sunset");
       flare.visible = shouldFlare;
     }
 
