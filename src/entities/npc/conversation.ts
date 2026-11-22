@@ -34,6 +34,17 @@ export function initConversationManager(
     const pairKey = getPairKey(npcA, npcB);
     pairCooldowns.set(pairKey, 30.0);
 
+    // Enforce respectful conversational distance (min 1.6m) so speakers never clip
+    const posA = npcA.getPosition();
+    const posB = npcB.getPosition();
+    const curDist = posA.distanceTo(posB);
+    if (curDist < 1.65 && curDist > 0.01) {
+      const push = (1.65 - curDist) * 0.5;
+      const pushDir = posA.clone().sub(posB).normalize();
+      posA.addScaledVector(pushDir, push);
+      posB.addScaledVector(pushDir, -push);
+    }
+
     npcA.faceTarget(npcB.getPosition(), 10.0);
     npcB.faceTarget(npcA.getPosition(), 10.0);
 

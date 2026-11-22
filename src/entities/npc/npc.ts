@@ -34,6 +34,7 @@ export interface NPCController {
   update: (dt: number) => void;
   getState: () => "IDLE" | "WALK" | "GREET" | "ACTIVITY";
   getCurrentActivity: () => string;
+  getCurrentActivityIndex?: () => number;
   getPosition: () => THREE.Vector3;
   teleport: (x: number, y: number, z: number) => void;
   faceTarget: (targetPos: THREE.Vector3, duration?: number) => void;
@@ -294,7 +295,7 @@ export function initNPC(
       const oPos = other.getPosition();
       const dx = pos.x - oPos.x;
       const dz = pos.z - oPos.z;
-      if (dx * dx + dz * dz < 0.76 * 0.76) return true;
+      if (dx * dx + dz * dz < 1.45 * 1.45) return true;
     }
     return false;
   }
@@ -335,12 +336,12 @@ export function initNPC(
       const dx = pos.x - oPos.x;
       const dz = pos.z - oPos.z;
       const dSq = dx * dx + dz * dz;
-      const minDist = 0.86;
+      const minDist = 1.35;
       if (dSq < minDist * minDist && dSq > 0.0001) {
         const d = Math.sqrt(dSq);
         const overlap = minDist - d;
-        pos.x += (dx / d) * overlap * 0.5;
-        pos.z += (dz / d) * overlap * 0.5;
+        pos.x += (dx / d) * overlap * 0.55;
+        pos.z += (dz / d) * overlap * 0.55;
       }
     }
   }
@@ -374,21 +375,44 @@ export function initNPC(
   }
 
   function advanceToNextActivity() {
-    const candidateIndices: number[] = [];
-    for (let i = 0; i < activities.length; i++) {
-      if (i !== currentActivityIndex) candidateIndices.push(i);
+    // Avoid destinations currently occupied or chosen by other residents
+    const occupiedIndices = new Set<number>();
+    for (const other of registeredNPCs) {
+      if (other.id === npcId) continue;
+      const oPos = other.getPosition();
+      for (let k = 0; k < activities.length; k++) {
+        if (activities[k]!.spot.distanceTo(oPos) < 2.4) {
+          occupiedIndices.add(k);
+        }
+      }
+      if (typeof other.getCurrentActivityIndex === "function") {
+        occupiedIndices.add(other.getCurrentActivityIndex());
+      }
     }
+
+    let candidateIndices: number[] = [];
+    for (let i = 0; i < activities.length; i++) {
+      if (i !== currentActivityIndex && !occupiedIndices.has(i)) {
+        candidateIndices.push(i);
+      }
+    }
+    if (candidateIndices.length === 0) {
+      for (let i = 0; i < activities.length; i++) {
+        if (i !== currentActivityIndex) candidateIndices.push(i);
+      }
+    }
+
     const nextIdx = candidateIndices[Math.floor(Math.random() * candidateIndices.length)] ?? 0;
     currentActivityIndex = nextIdx;
 
     const baseAct = activities[currentActivityIndex]!;
     const destJitter = new THREE.Vector3(
-      (Math.random() - 0.5) * 0.8,
+      (Math.random() - 0.5) * 1.0,
       0,
-      (Math.random() - 0.5) * 0.8
+      (Math.random() - 0.5) * 1.0
     );
     const candidateTarget = baseAct.spot.clone().add(destJitter);
-    if (!checkCollision(candidateTarget, 0.46)) {
+    if (!checkCollision(candidateTarget, 0.5)) {
       currentTarget.copy(candidateTarget);
     } else {
       currentTarget.copy(baseAct.spot);
@@ -609,15 +633,58 @@ export function initNPC(
         dirVec.normalize();
 
         let steerDir = dirVec.clone();
-        const lookaheadDist = 1.15;
-        const probeFront = currentPos.clone().add(steerDir.clone().multiplyScalar(lookaheadDist));
 
-        if (checkCollision(probeFront, 0.46)) {
-          const angles = [Math.PI / 4, -Math.PI / 4, Math.PI / 2, -Math.PI / 2, (3 * Math.PI) / 4, (-3 * Math.PI) / 4];
+        // === VIRTUAL VISION CONE & ANTICIPATORY STEERING ===
+        // 1. Dynamic NPC-to-NPC Vision & Anticipatory Lateral Steering (Jarak Pandang 3.5m)
+        const visionRange = 3.5;
+        const avoidanceVec = new THREE.Vector3(0, 0, 0);
+        let yieldForOther = false;
+
+        for (const other of registeredNPCs) {
+          if (other.id === npcId) continue;
+          const oPos = other.getPosition();
+          const toOther = new THREE.Vector3(oPos.x - currentPos.x, 0, oPos.z - currentPos.z);
+          const distToOther = toOther.length();
+
+          if (distToOther < visionRange && distToOther > 0.01) {
+            toOther.normalize();
+            // Check if oncoming NPC is inside forward 130° vision cone
+            const forwardDot = steerDir.dot(toOther);
+            if (forwardDot > 0.2) {
+              const side = new THREE.Vector3(-steerDir.z, 0, steerDir.x);
+              const cross = steerDir.x * toOther.z - steerDir.z * toOther.x;
+              const steerSign = cross > 0 ? -1 : 1;
+              const urgency = Math.pow((visionRange - distToOther) / visionRange, 1.4);
+              avoidanceVec.add(side.multiplyScalar(steerSign * urgency * 2.2));
+
+              if (distToOther < 1.35 && forwardDot > 0.65) {
+                yieldForOther = true;
+              }
+            }
+          }
+        }
+
+        if (avoidanceVec.lengthSq() > 0.01) {
+          steerDir.add(avoidanceVec).normalize();
+        }
+
+        // 2. Multi-Whisker Environment Sensor (Center 2.4m, Left/Right 1.8m, Wide 1.2m)
+        const forwardProbe = currentPos.clone().add(steerDir.clone().multiplyScalar(2.2));
+        const nearProbe = currentPos.clone().add(steerDir.clone().multiplyScalar(1.1));
+        const centerBlocked = checkCollision(forwardProbe, 0.48) || checkCollision(nearProbe, 0.48);
+
+        if (centerBlocked) {
+          const angles = [
+            Math.PI / 6, -Math.PI / 6,
+            Math.PI / 3, -Math.PI / 3,
+            Math.PI / 2, -Math.PI / 2,
+            (2 * Math.PI) / 3, (-2 * Math.PI) / 3
+          ];
           for (const angle of angles) {
-            const candidate = dirVec.clone().applyAxisAngle(yAxis, angle);
-            const probeCandidate = currentPos.clone().add(candidate.clone().multiplyScalar(lookaheadDist));
-            if (!checkCollision(probeCandidate, 0.46)) {
+            const candidate = steerDir.clone().applyAxisAngle(yAxis, angle);
+            const probeFar = currentPos.clone().add(candidate.clone().multiplyScalar(1.8));
+            const probeClose = currentPos.clone().add(candidate.clone().multiplyScalar(0.9));
+            if (!checkCollision(probeFar, 0.48) && !checkCollision(probeClose, 0.48)) {
               steerDir = candidate;
               break;
             }
@@ -628,18 +695,19 @@ export function initNPC(
         targetRotation.setFromAxisAngle(yAxis, moveAngle);
         model.root.quaternion.slerp(targetRotation, Math.min(1, 6 * dt));
 
-        const stepDist = walkSpeed * dt;
+        const effectiveSpeed = yieldForOther ? walkSpeed * 0.25 : walkSpeed;
+        const stepDist = effectiveSpeed * dt;
         const step = steerDir.clone().multiplyScalar(stepDist);
         const nextPos = currentPos.clone().add(step);
 
-        if (!checkCollision(nextPos, 0.46)) {
+        if (!checkCollision(nextPos, 0.48)) {
           currentPos.copy(nextPos);
         } else {
           const nextX = currentPos.clone().add(new THREE.Vector3(step.x, 0, 0));
           const nextZ = currentPos.clone().add(new THREE.Vector3(0, 0, step.z));
-          if (!checkCollision(nextX, 0.46)) {
+          if (!checkCollision(nextX, 0.48)) {
             currentPos.copy(nextX);
-          } else if (!checkCollision(nextZ, 0.46)) {
+          } else if (!checkCollision(nextZ, 0.48)) {
             currentPos.copy(nextZ);
           }
         }
@@ -713,6 +781,7 @@ export function initNPC(
     update,
     getState,
     getCurrentActivity,
+    getCurrentActivityIndex: () => currentActivityIndex,
     getPosition,
     teleport,
     faceTarget,

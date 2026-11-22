@@ -131,11 +131,16 @@ export function loadWorld(
             "hotel", "saloon", "bank", "sheriff", "store",
             "office", "depot", "house", "settlement", "water_tower", "windmill"
           ]);
+          const SOLID_OBSTACLE_ASSETS = new Set([
+            ...BUILDING_ASSETS,
+            "cart", "well", "fence", "crates", "bench", "hitching_post", "telegraph_pole"
+          ]);
           const isBuilding = BUILDING_ASSETS.has(inst.asset);
+          const isObstacle = SOLID_OBSTACLE_ASSETS.has(inst.asset);
 
-          if (isBuilding) {
+          if (isObstacle) {
             const wholeBox = new THREE.Box3().setFromObject(model);
-            if (wholeBox.max.y - wholeBox.min.y > 0.4) {
+            if (wholeBox.max.y - wholeBox.min.y > 0.25) {
               buildingBoxes.push(wholeBox);
             }
           }
