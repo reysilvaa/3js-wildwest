@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { createModelObject, ModelObject } from "../core/models.js";
-import { getGroundElevation } from "../environment/ground.js";
+import { createModelObject, ModelObject } from "../../core/models.js";
+import { getGroundElevation } from "../../environment/terrain/height.js";
 
 export interface NPCOptions {
   initialPos?: [number, number, number];

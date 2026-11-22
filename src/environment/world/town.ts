@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { loadAsset, AssetKey } from "./assets.js";
+import { loadAsset, AssetKey } from "../assets.js";
 
 export interface TownInstance {
   asset: AssetKey;

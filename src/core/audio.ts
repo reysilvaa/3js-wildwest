@@ -66,57 +66,6 @@ export function initAudio(options: AudioOptions = {}): AudioSystem {
   window.addEventListener("pointerdown", unlockAudio);
   window.addEventListener("keydown", unlockAudio);
 
-  // Floating Sound button in weather-controls or standalone
-  let audioBtn: HTMLButtonElement | null = null;
-  const controlsEl = document.getElementById("weather-controls");
-  if (controlsEl) {
-    audioBtn = document.createElement("button");
-    audioBtn.id = "btn-audio";
-    audioBtn.innerHTML = "🔊 Sound: On";
-    audioBtn.title = "Toggle Sound & Music (Shortcut: M)";
-    audioBtn.style.cssText = `
-      background: rgba(20, 15, 10, 0.7);
-      color: #fff;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 8px;
-      padding: 8px 12px;
-      font-size: 13px;
-      cursor: pointer;
-      backdrop-filter: blur(6px);
-      transition: all 0.2s ease;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      user-select: none;
-    `;
-    audioBtn.addEventListener("mouseenter", () => {
-      audioBtn!.style.background = "rgba(45, 35, 25, 0.9)";
-      audioBtn!.style.borderColor = "rgba(229, 155, 60, 0.5)";
-    });
-    audioBtn.addEventListener("mouseleave", () => {
-      audioBtn!.style.background = "rgba(20, 15, 10, 0.7)";
-      audioBtn!.style.borderColor = "rgba(255, 255, 255, 0.15)";
-    });
-    audioBtn.addEventListener("click", () => {
-      toggleMute();
-    });
-    controlsEl.appendChild(audioBtn);
-  }
-
-  function updateBtnUI() {
-    if (audioBtn) {
-      audioBtn.innerHTML = muted ? "🔇 Sound: Off" : "🔊 Sound: On";
-      audioBtn.style.color = muted ? "#888" : "#fff";
-    }
-  }
-
-  window.addEventListener("keydown", (e) => {
-    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-    if (e.key.toLowerCase() === "m") {
-      toggleMute();
-    }
-  });
-
   function setDayTime(active: boolean) {
     isDay = active;
     tryPlay();
@@ -136,7 +85,6 @@ export function initAudio(options: AudioOptions = {}): AudioSystem {
 
   function toggleMute(): boolean {
     muted = !muted;
-    updateBtnUI();
     if (muted) {
       dayAudio.pause();
       rainAudio.pause();

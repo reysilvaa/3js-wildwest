@@ -1,4 +1,7 @@
 import * as THREE from "three";
+import { getGroundElevation, getGroundHeightOnly } from "./height.js";
+
+export { getGroundElevation, getGroundHeightOnly };
 
 export interface GroundOptions {
   size?: number;
@@ -59,20 +62,16 @@ export function initDesertGround(scene: THREE.Scene, options: GroundOptions = {}
     const dist = Math.hypot(x - tcX, z - tcZ);
 
     if (dist < flatRadius) {
-      // Flat inner apron around town
       posAttr.setY(i, 0.0);
     } else {
-      // Smoothstep transition factor from flat town to rolling dunes
       const t = Math.min(1, Math.max(0, (dist - flatRadius) / 70));
       const blend = t * t * (3 - 2 * t);
 
-      // Rolling desert dunes
       const dunes =
         Math.sin(x * 0.022 + z * 0.015) * 3.2 +
         Math.cos(x * 0.012 - z * 0.018) * 2.6 +
         Math.sin(dist * 0.018) * 1.5;
 
-      // Distant desert mesas and buttes at perimeter (dist > 220m)
       let mesa = 0;
       if (dist > 220) {
         const mesaNoise = Math.sin(x * 0.007) * Math.cos(z * 0.007);
@@ -151,7 +150,7 @@ export function initDesertGround(scene: THREE.Scene, options: GroundOptions = {}
     depthWrite: false,
     roughness: 0.28,
     metalness: 0.04,
-    envMapIntensity: 2.2, // Gives specular sky reflections on water puddle areas
+    envMapIntensity: 2.2,
   });
 
   const mudStreetMesh = new THREE.Mesh(streetGeo, mudStreetMat);
@@ -160,7 +159,7 @@ export function initDesertGround(scene: THREE.Scene, options: GroundOptions = {}
   mudStreetMesh.visible = false;
   scene.add(mudStreetMesh);
 
-  let wetness = 0; // 0 (dry no rain) -> 1 (full rain accumulation)
+  let wetness = 0; // 0 (dry) -> 1 (full rain accumulation)
 
   function update(dt: number, isRaining: boolean): void {
     const targetWetness = isRaining ? 1.0 : 0.0;
@@ -172,11 +171,9 @@ export function initDesertGround(scene: THREE.Scene, options: GroundOptions = {}
       wetness = targetWetness;
     }
 
-    // Dynamic desert sand darkening & damp glossiness during rain
     sandMat.roughness = THREE.MathUtils.lerp(0.94, 0.65, wetness);
     sandMat.color.lerpColors(drySandColor, wetSandColor, wetness);
 
-    // Dynamic natural mud & reflective water puddle accumulation in town
     mudStreetMat.opacity = wetness;
     mudStreetMesh.visible = wetness > 0.01;
   }
@@ -186,44 +183,4 @@ export function initDesertGround(scene: THREE.Scene, options: GroundOptions = {}
     get puddleMesh() { return mudStreetMesh; },
     update,
   };
-}
-
-export function getGroundHeightOnly(
-  x: number,
-  z: number,
-  tcX = 10,
-  tcZ = -5,
-  flatRadius = 45
-): number {
-  const dist = Math.hypot(x - tcX, z - tcZ);
-  if (dist < flatRadius) return 0.0;
-  const t = Math.min(1, Math.max(0, (dist - flatRadius) / 70));
-  const blend = t * t * (3 - 2 * t);
-  const dunes =
-    Math.sin(x * 0.022 + z * 0.015) * 3.2 +
-    Math.cos(x * 0.012 - z * 0.018) * 2.6 +
-    Math.sin(dist * 0.018) * 1.5;
-  let mesa = 0;
-  if (dist > 220) {
-    const mesaNoise = Math.sin(x * 0.007) * Math.cos(z * 0.007);
-    if (mesaNoise > 0.35) {
-      mesa = Math.min(28, (mesaNoise - 0.35) * 60);
-    }
-  }
-  return blend * (dunes + mesa);
-}
-
-export function getGroundElevation(
-  x: number,
-  z: number,
-  tcX = 10,
-  tcZ = -5,
-  flatRadius = 45
-): { height: number; normal: THREE.Vector3 } {
-  const height = getGroundHeightOnly(x, z, tcX, tcZ, flatRadius);
-  const eps = 0.2;
-  const hX = getGroundHeightOnly(x + eps, z, tcX, tcZ, flatRadius);
-  const hZ = getGroundHeightOnly(x, z + eps, tcX, tcZ, flatRadius);
-  const normal = new THREE.Vector3(height - hX, eps, height - hZ).normalize();
-  return { height, normal };
 }
