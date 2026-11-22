@@ -122,11 +122,11 @@
     },
     {
       "name": "Depot Freight Dock",
-      "description": "Resting against the wooden cargo crates by the depot",
+      "description": "Surveying the railway tracks by the freight dock",
       "spot": [
-        7.0,
+        9.5,
         0.45,
-        -22.5
+        -23.5
       ],
       "facingAngle": 0.0,
       "duration": 10.0

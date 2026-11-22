@@ -275,7 +275,12 @@ export function initNPC(
 
     const destJitter = new THREE.Vector3((Math.random() - 0.5) * 0.7, 0, (Math.random() - 0.5) * 0.7);
     const destCandidate = destination.clone().add(destJitter);
-    pathQueue.push(!checkCollision(destCandidate, 0.46) ? destCandidate : destination.clone());
+    const targetDest = !checkCollision(destCandidate, 0.52)
+      ? destCandidate
+      : (!checkCollision(destination, 0.52)
+          ? destination.clone()
+          : destination.clone().lerp(streetNodes[endNodeIdx]!, 0.35));
+    pathQueue.push(targetDest);
   }
 
   function checkCollision(pos: THREE.Vector3, radius = 0.46): boolean {
@@ -295,7 +300,7 @@ export function initNPC(
       const oPos = other.getPosition();
       const dx = pos.x - oPos.x;
       const dz = pos.z - oPos.z;
-      if (dx * dx + dz * dz < 1.45 * 1.45) return true;
+      if (dx * dx + dz * dz < 1.65 * 1.65) return true;
     }
     return false;
   }
@@ -318,11 +323,11 @@ export function initNPC(
           const minZ = Math.min(overlapZ1, overlapZ2);
 
           if (minX < minZ) {
-            if (overlapX1 < overlapX2) pos.x = box.min.x - radius - 0.08;
-            else pos.x = box.max.x + radius + 0.08;
+            if (overlapX1 < overlapX2) pos.x = box.min.x - radius - 0.15;
+            else pos.x = box.max.x + radius + 0.15;
           } else {
-            if (overlapZ1 < overlapZ2) pos.z = box.min.z - radius - 0.08;
-            else pos.z = box.max.z + radius + 0.08;
+            if (overlapZ1 < overlapZ2) pos.z = box.min.z - radius - 0.15;
+            else pos.z = box.max.z + radius + 0.15;
           }
         }
       }
@@ -336,12 +341,12 @@ export function initNPC(
       const dx = pos.x - oPos.x;
       const dz = pos.z - oPos.z;
       const dSq = dx * dx + dz * dz;
-      const minDist = 1.35;
+      const minDist = 1.6;
       if (dSq < minDist * minDist && dSq > 0.0001) {
         const d = Math.sqrt(dSq);
         const overlap = minDist - d;
-        pos.x += (dx / d) * overlap * 0.55;
-        pos.z += (dz / d) * overlap * 0.55;
+        pos.x += (dx / d) * overlap * 0.6;
+        pos.z += (dz / d) * overlap * 0.6;
       }
     }
   }
@@ -635,8 +640,9 @@ export function initNPC(
         let steerDir = dirVec.clone();
 
         // === VIRTUAL VISION CONE & ANTICIPATORY STEERING ===
-        // 1. Dynamic NPC-to-NPC Vision & Anticipatory Lateral Steering (Jarak Pandang 3.5m)
-        const visionRange = 3.5;
+        // === VIRTUAL VISION CONE & ANTICIPATORY STEERING ===
+        // 1. Dynamic NPC-to-NPC Vision & Anticipatory Lateral Steering (Jarak Pandang 4.2m)
+        const visionRange = 4.2;
         const avoidanceVec = new THREE.Vector3(0, 0, 0);
         let yieldForOther = false;
 
@@ -648,16 +654,17 @@ export function initNPC(
 
           if (distToOther < visionRange && distToOther > 0.01) {
             toOther.normalize();
-            // Check if oncoming NPC is inside forward 130° vision cone
+            // Check if oncoming NPC is inside forward 140° vision cone
             const forwardDot = steerDir.dot(toOther);
-            if (forwardDot > 0.2) {
+            if (forwardDot > 0.15) {
               const side = new THREE.Vector3(-steerDir.z, 0, steerDir.x);
               const cross = steerDir.x * toOther.z - steerDir.z * toOther.x;
-              const steerSign = cross > 0 ? -1 : 1;
-              const urgency = Math.pow((visionRange - distToOther) / visionRange, 1.4);
-              avoidanceVec.add(side.multiplyScalar(steerSign * urgency * 2.2));
+              const steerSign = cross >= 0 ? -1 : 1;
+              const urgency = Math.pow((visionRange - distToOther) / visionRange, 1.2);
+              avoidanceVec.add(side.multiplyScalar(steerSign * urgency * 3.2));
 
-              if (distToOther < 1.35 && forwardDot > 0.65) {
+              // If other resident is directly in front within stopping buffer (1.85m):
+              if (distToOther < 1.85 && forwardDot > 0.35) {
                 yieldForOther = true;
               }
             }
@@ -668,10 +675,10 @@ export function initNPC(
           steerDir.add(avoidanceVec).normalize();
         }
 
-        // 2. Multi-Whisker Environment Sensor (Center 2.4m, Left/Right 1.8m, Wide 1.2m)
-        const forwardProbe = currentPos.clone().add(steerDir.clone().multiplyScalar(2.2));
-        const nearProbe = currentPos.clone().add(steerDir.clone().multiplyScalar(1.1));
-        const centerBlocked = checkCollision(forwardProbe, 0.48) || checkCollision(nearProbe, 0.48);
+        // 2. Multi-Whisker Environment Sensor (Center 2.6m & 1.3m)
+        const forwardProbe = currentPos.clone().add(steerDir.clone().multiplyScalar(2.6));
+        const nearProbe = currentPos.clone().add(steerDir.clone().multiplyScalar(1.3));
+        const centerBlocked = checkCollision(forwardProbe, 0.52) || checkCollision(nearProbe, 0.52);
 
         if (centerBlocked) {
           const angles = [
@@ -682,9 +689,9 @@ export function initNPC(
           ];
           for (const angle of angles) {
             const candidate = steerDir.clone().applyAxisAngle(yAxis, angle);
-            const probeFar = currentPos.clone().add(candidate.clone().multiplyScalar(1.8));
-            const probeClose = currentPos.clone().add(candidate.clone().multiplyScalar(0.9));
-            if (!checkCollision(probeFar, 0.48) && !checkCollision(probeClose, 0.48)) {
+            const probeFar = currentPos.clone().add(candidate.clone().multiplyScalar(2.0));
+            const probeClose = currentPos.clone().add(candidate.clone().multiplyScalar(1.0));
+            if (!checkCollision(probeFar, 0.52) && !checkCollision(probeClose, 0.52)) {
               steerDir = candidate;
               break;
             }
@@ -695,45 +702,41 @@ export function initNPC(
         targetRotation.setFromAxisAngle(yAxis, moveAngle);
         model.root.quaternion.slerp(targetRotation, Math.min(1, 6 * dt));
 
-        const effectiveSpeed = yieldForOther ? walkSpeed * 0.25 : walkSpeed;
-        const stepDist = effectiveSpeed * dt;
-        const step = steerDir.clone().multiplyScalar(stepDist);
-        const nextPos = currentPos.clone().add(step);
-
-        if (!checkCollision(nextPos, 0.48)) {
-          currentPos.copy(nextPos);
-        } else {
-          const nextX = currentPos.clone().add(new THREE.Vector3(step.x, 0, 0));
-          const nextZ = currentPos.clone().add(new THREE.Vector3(0, 0, step.z));
-          if (!checkCollision(nextX, 0.48)) {
-            currentPos.copy(nextX);
-          } else if (!checkCollision(nextZ, 0.48)) {
-            currentPos.copy(nextZ);
-          }
-        }
-
-        const movedDist = currentPos.distanceTo(lastPos);
-        lastPos.copy(currentPos);
-
-        if (movedDist < 0.003) {
+        // When yielding for oncoming resident: FULL STOP and idle politely
+        if (yieldForOther) {
+          fadeToAction("Idle", 0.2);
           stuckTimer += dt;
-          if (stuckTimer > 0.25) {
-            fadeToAction("Idle", 0.2);
-          }
-          if (stuckTimer > 0.8) {
-            if (pathQueue.length > 1) {
-              pathQueue.shift();
-            } else {
-              planPathTo(currentTarget);
-            }
+          if (stuckTimer > 1.2) {
+            advanceToNextActivity();
             stuckTimer = 0;
           }
         } else {
-          stuckTimer = 0;
-          if (currentActionName !== "Walk") {
-            fadeToAction("Walk", 0.2);
+          const stepDist = walkSpeed * dt;
+          const step = steerDir.clone().multiplyScalar(stepDist);
+          const nextPos = currentPos.clone().add(step);
+
+          if (!checkCollision(nextPos, 0.52)) {
+            currentPos.copy(nextPos);
+            stuckTimer = 0;
+            if (currentActionName !== "Walk") {
+              fadeToAction("Walk", 0.2);
+            }
+          } else {
+            // Blocked by obstacle ahead: stop moving and idle rather than pushing into walls
+            fadeToAction("Idle", 0.2);
+            stuckTimer += dt;
+            if (stuckTimer > 0.8) {
+              if (pathQueue.length > 1) {
+                pathQueue.shift();
+              } else {
+                advanceToNextActivity();
+              }
+              stuckTimer = 0;
+            }
           }
         }
+
+        lastPos.copy(currentPos);
       }
     }
 
