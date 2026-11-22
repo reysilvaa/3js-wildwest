@@ -39,7 +39,7 @@ const weather = initWeather(scene, sunLight, hemiLight, flare, {
 const npc = initNPC(scene, buildingBoxes, camera);
 
 const clock = new THREE.Clock();
-const speed = 15; // base units per second
+const speed = 12; // base units per second (tuned for street-level camera immersion)
 
 // Comprehensive keyboard state tracking (WASD, Arrows, QE elevation, Shift sprint)
 const activeKeys = new Set<string>();

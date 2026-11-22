@@ -28,7 +28,7 @@ export function initNPC(
 ): NPCController {
   const {
     initialPos = [10.0, 0.0, -10.0],
-    walkSpeed = 1.3,
+    walkSpeed = 1.15,
     dataUrl = "/models/npc_data.json",
     walkAnimUrl = "/models/movement/walk.glb",
   } = options;
@@ -172,9 +172,9 @@ export function initNPC(
     pathQueue.push(destination.clone());
   }
 
-  function checkCollision(pos: THREE.Vector3, radius = 0.55): boolean {
+  function checkCollision(pos: THREE.Vector3, radius = 0.46): boolean {
     const min = new THREE.Vector3(pos.x - radius, pos.y + 0.1, pos.z - radius);
-    const max = new THREE.Vector3(pos.x + radius, pos.y + 1.8, pos.z + radius);
+    const max = new THREE.Vector3(pos.x + radius, pos.y + 1.55, pos.z + radius);
     const npcBox = new THREE.Box3(min, max);
 
     for (const b of buildingBoxes) {
@@ -186,7 +186,7 @@ export function initNPC(
     return false;
   }
 
-  function resolvePenetration(pos: THREE.Vector3, radius = 0.55): void {
+  function resolvePenetration(pos: THREE.Vector3, radius = 0.46): void {
     const applyBoxes = (boxes: THREE.Box3[]) => {
       for (const box of boxes) {
         if (
@@ -259,12 +259,12 @@ export function initNPC(
   const gltfLoader = new GLTFLoader();
 
   // Skinned Model Instance
-  // Load 3D Skinned Model
+  // Load 3D Skinned Model (Human scale 0.85 to fit modular buildings & doorframes)
   createModelObject(
     "npc_jokowi",
     {
       position: currentPos,
-      scale: 1.0,
+      scale: 0.85,
       castShadow: true,
       receiveShadow: true,
     },
@@ -375,18 +375,18 @@ export function initNPC(
       } else {
         dirVec.normalize();
 
-        // Lookahead collision avoidance: probe 1.1m in front
+        // Lookahead collision avoidance: probe 0.95m in front
         let steerDir = dirVec.clone();
-        const lookaheadDist = 1.1;
+        const lookaheadDist = 0.95;
         const probeFront = currentPos.clone().add(steerDir.clone().multiplyScalar(lookaheadDist));
 
-        if (checkCollision(probeFront, 0.55)) {
+        if (checkCollision(probeFront, 0.46)) {
           // Probe left & right whisker angles to steer clear of walls
           const angles = [Math.PI / 4, -Math.PI / 4, Math.PI / 2, -Math.PI / 2];
           for (const angle of angles) {
             const candidate = dirVec.clone().applyAxisAngle(yAxis, angle);
             const probeCandidate = currentPos.clone().add(candidate.clone().multiplyScalar(lookaheadDist));
-            if (!checkCollision(probeCandidate, 0.55)) {
+            if (!checkCollision(probeCandidate, 0.46)) {
               steerDir = candidate;
               break;
             }
@@ -402,14 +402,14 @@ export function initNPC(
         const step = steerDir.clone().multiplyScalar(stepDist);
         const nextPos = currentPos.clone().add(step);
 
-        if (!checkCollision(nextPos, 0.55)) {
+        if (!checkCollision(nextPos, 0.46)) {
           currentPos.copy(nextPos);
         } else {
           const nextX = currentPos.clone().add(new THREE.Vector3(step.x, 0, 0));
           const nextZ = currentPos.clone().add(new THREE.Vector3(0, 0, step.z));
-          if (!checkCollision(nextX, 0.55)) {
+          if (!checkCollision(nextX, 0.46)) {
             currentPos.copy(nextX);
-          } else if (!checkCollision(nextZ, 0.55)) {
+          } else if (!checkCollision(nextZ, 0.46)) {
             currentPos.copy(nextZ);
           }
         }
@@ -446,7 +446,7 @@ export function initNPC(
     // -------------------------------------------------------------
     const centerElev = getGroundElevation(currentPos.x, currentPos.z);
     currentPos.y = centerElev.height;
-    resolvePenetration(currentPos, 0.55);
+    resolvePenetration(currentPos, 0.46);
     model.root.position.copy(currentPos);
   }
 

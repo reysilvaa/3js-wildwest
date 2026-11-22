@@ -23,7 +23,7 @@ export function initScene(options: SceneOptions = {}): SceneContext {
   const {
     fogColor = 0xd6a876,
     fogDensity = 0.01,
-    cameraPos = [10, 12, -25],
+    cameraPos = [10, 4.5, -20],
     sunPos = [30, 45, -20],
   } = options;
 
@@ -31,7 +31,7 @@ export function initScene(options: SceneOptions = {}): SceneContext {
   scene.background = new THREE.Color(fogColor);
   scene.fog = new THREE.FogExp2(fogColor, fogDensity);
 
-  const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+  const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
   camera.position.set(...cameraPos);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
@@ -49,8 +49,8 @@ export function initScene(options: SceneOptions = {}): SceneContext {
   controls.dampingFactor = 0.05;
   controls.maxPolarAngle = Math.PI / 2 - 0.02;
   controls.minDistance = 2;
-  controls.maxDistance = 150;
-  controls.target.set(10, 3, 15);
+  controls.maxDistance = 70;
+  controls.target.set(10, 1.5, 5);
 
   const hemiLight = new THREE.HemisphereLight(0xffe2b8, 0x8a6a4b, 1.2);
   hemiLight.position.set(0, 50, 0);
