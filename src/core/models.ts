@@ -80,7 +80,7 @@ function resolveUrl(keyOrUrl: AssetKey | string): string {
   return keyOrUrl;
 }
 
-function loadGltfCached(url: string): Promise<GLTF> {
+export function loadGltfCached(url: string): Promise<GLTF> {
   const cached = rawGltfCache.get(url);
   if (cached) return Promise.resolve(cached);
 

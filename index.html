@@ -53,6 +53,23 @@
         backdrop-filter: blur(4px);
         border: 1px solid rgba(255, 255, 255, 0.08);
       }
+      .wasd-indicator {
+        position: absolute;
+        top: 56px;
+        right: 16px;
+        background: rgba(0, 0, 0, 0.7);
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 11px;
+        color: #f5deb3;
+        line-height: 1.4;
+        white-space: nowrap;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+      .wasd-indicator.visible {
+        opacity: 1;
+      }
     </style>
   </head>
   <body>
@@ -63,6 +80,7 @@
     <div id="info">
       <strong>Wild West Town</strong> &bull; Drag to rotate &bull; [N] Night/Day &bull; [R] Rain &bull; [C] Cycle &bull; [M] BGM
     </div>
+    <div id="wasd-indicator" class="wasd-indicator">WASD: Move camera</div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

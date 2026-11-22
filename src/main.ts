@@ -42,10 +42,32 @@ initAudioUI({
   isMuted: () => audio.isMuted(),
 });
 
-// 7. Intelligent Town NPC AI
-const npc = initNPC(scene, buildingBoxes, camera);
+// 7. Intelligent Town NPCs (Jokowi Roaming + Frontier Cowboy Guard)
+// 7. Intelligent Town NPCs (5 Procedurally Generated Modular Residents)
+const NPC_SPAWN_SPOTS: [number, number, number][] = [
+  [13.2, 0.45, -7.5], // Saloon Porch
+  [6.8, 0.45, 7.0],   // Bank Steps
+  [13.0, 0.45, 0.5],  // Sheriff Office
+  [13.0, 0.45, 12.0], // General Store
+  [6.8, 0.45, -16.0], // Train Depot
+];
 
-// 7. Clean Declarative Game Loop
+const NPC_NAMES = ["Arthur", "Wyatt", "Doc", "Jesse", "Sadie"];
+
+const npcs = NPC_SPAWN_SPOTS.map((pos, i) =>
+  initNPC(scene, buildingBoxes, camera, {
+    name: NPC_NAMES[i] ?? `Resident ${i + 1}`,
+    useModular: true,
+    modularHead: "random",
+    initialPos: pos,
+    scale: 0.83 + (i % 3) * 0.025,
+    walkSpeed: 1.02 + (i % 4) * 0.05,
+    stationary: false,
+    startActivityIndex: i,
+  })
+);
+
+// 8. Clean Declarative Game Loop
 const clock = new THREE.Clock();
 
 function animate() {
@@ -57,7 +79,9 @@ function animate() {
   world.update(dt);
   weather.update(dt);
   audio.update(dt);
-  npc.update(dt);
+  for (let i = 0; i < npcs.length; i++) {
+    npcs[i]?.update(dt);
+  }
   tumbleweeds.update(dt, buildingBoxes);
   clouds.update(dt, weather.getState());
   controls.update();

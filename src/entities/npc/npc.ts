@@ -1,15 +1,28 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { createModelObject, ModelObject } from "../../core/models.js";
+import { assembleModularCharacter } from "./modular.js";
 import { getGroundElevation } from "../../environment/terrain/height.js";
+import type { AssetKey } from "../../environment/assets.js";
+
+export * from "./modular.js";
 
 export interface NPCOptions {
+  name?: string;
+  modelKey?: AssetKey;
+  useModular?: boolean;
+  modularHead?: "cowboy" | "jokowi" | "random";
+  modularOutfit?: "suit" | "random";
   initialPos?: [number, number, number];
   buildingBoxes?: THREE.Box3[];
   camera?: THREE.Camera;
   walkSpeed?: number;
   dataUrl?: string;
   walkAnimUrl?: string;
+  scale?: number;
+  stationary?: boolean;
+  facingAngle?: number;
+  startActivityIndex?: number;
 }
 
 export interface NPCController {
@@ -27,10 +40,18 @@ export function initNPC(
   options: NPCOptions = {}
 ): NPCController {
   const {
+    name: _name = "Resident",
+    modelKey,
+    useModular = true,
+    modularHead = "random",
+    modularOutfit: _modularOutfit,
     initialPos = [10.0, 0.0, -10.0],
     walkSpeed = 1.15,
     dataUrl = "/models/npc_data.json",
     walkAnimUrl = "/models/movement/walk.glb",
+    scale = 0.85,
+    stationary = false,
+    facingAngle = 0,
   } = options;
 
   let model: ModelObject | null = null;
@@ -38,7 +59,7 @@ export function initNPC(
   let stateTimer = 3.0;
   let currentActionName = "Idle";
   let activeAction: THREE.AnimationAction | null = null;
-  let currentActivityIndex = 0;
+  let currentActivityIndex = options.startActivityIndex ?? 0;
 
   interface TownActivity {
     name: string;
@@ -98,8 +119,10 @@ export function initNPC(
             duration: a.duration,
           });
         }
+        const initialIdx = Math.min(currentActivityIndex, activities.length - 1);
+        currentActivityIndex = initialIdx;
         if (currentTarget) {
-          currentTarget.copy(activities[0]!.spot);
+          currentTarget.copy(activities[initialIdx]!.spot);
           planPathTo(currentTarget);
         }
       }
@@ -260,18 +283,45 @@ export function initNPC(
 
   // Skinned Model Instance
   // Load 3D Skinned Model (Human scale 0.85 to fit modular buildings & doorframes)
-  createModelObject(
-    "npc_jokowi",
-    {
-      position: currentPos,
-      scale: 0.85,
-      castShadow: true,
-      receiveShadow: true,
-    },
-    scene
-  )
-    .then(async (obj) => {
+  let headUrl = "/models/npc/modular/heads/cowboy_head.glb";
+  if (modularHead === "jokowi") {
+    headUrl = "/models/npc/modular/heads/head_default.glb";
+  } else if (modularHead === "cowboy") {
+    headUrl = "/models/npc/modular/heads/cowboy_head.glb";
+  } else if (modularHead === "random") {
+    headUrl = Math.random() < 0.5 ? "/models/npc/modular/heads/cowboy_head.glb" : "/models/npc/modular/heads/head_default.glb";
+  }
+
+  const modelPromise: Promise<ModelObject> = (useModular || !modelKey)
+    ? assembleModularCharacter({
+        headUrl,
+        outfitUrl: "/models/npc/modular/outfits/outfit_suit.glb",
+        bodyUrl: "/models/npc/modular/bodies/body_hands.glb",
+      }, {
+        position: currentPos,
+        scale,
+        castShadow: true,
+        receiveShadow: true,
+      }, scene)
+    : createModelObject(
+        modelKey,
+        {
+          position: currentPos,
+          scale,
+          castShadow: true,
+          receiveShadow: true,
+        },
+        scene
+      );
+
+  modelPromise
+    .then(async (obj: ModelObject) => {
       model = obj;
+
+      if (stationary) {
+        obj.root.rotation.y = facingAngle;
+        return;
+      }
 
       // Load external walk animation from /models/movement/walk.glb (exported from walk.blend)
       try {
@@ -285,7 +335,7 @@ export function initNPC(
             if (t.name.toLowerCase().includes("hips") && (t.name.endsWith(".position") || t.name.endsWith(".translation"))) return true;
             return false;
           });
-          model.animations.set("Walk", walkClip);
+          obj.animations.set("Walk", walkClip);
           if (state === "WALK") {
             fadeToAction("Walk", 0.2);
           }
@@ -296,7 +346,7 @@ export function initNPC(
 
       fadeToAction("Idle", 0.1);
     })
-    .catch((err) => console.warn("Failed to load NPC:", err));
+    .catch((err: unknown) => console.warn("Failed to load NPC:", err));
 
   function update(dt: number) {
     if (!model) return;
@@ -311,6 +361,23 @@ export function initNPC(
       if (distToPlayer < 5.5) {
         playerNearby = true;
       }
+    }
+
+    if (stationary) {
+      if (playerNearby && camera) {
+        dirVec.copy(camera.position).sub(currentPos);
+        dirVec.y = 0;
+        if (dirVec.lengthSq() > 0.01) {
+          dirVec.normalize();
+          const targetAngle = Math.atan2(dirVec.x, dirVec.z);
+          targetRotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), targetAngle);
+          model.root.quaternion.slerp(targetRotation, Math.min(1, 5 * dt));
+        }
+      } else {
+        targetRotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), facingAngle);
+        model.root.quaternion.slerp(targetRotation, Math.min(1, 3 * dt));
+      }
+      return;
     }
 
     if (playerNearby && state !== "GREET") {
