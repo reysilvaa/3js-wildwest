@@ -103,7 +103,6 @@ export function initSunMoon(
   const ringGhostTex = createRingGhostTexture();
   const moonGlowTex = createMoonGlowTexture();
 
-  // Celestial Sun (Core + Corona + Optical Lensflare)
   const sunGroup = new THREE.Group();
   sunGroup.name = "CelestialSun";
 
@@ -142,7 +141,6 @@ export function initSunMoon(
   sunGroup.add(opticalFlare);
   scene.add(sunGroup);
 
-  // Celestial Moon (Core + Halo Sprite)
   const moonGroup = new THREE.Group();
   moonGroup.name = "CelestialMoon";
 

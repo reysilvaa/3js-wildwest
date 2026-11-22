@@ -2,7 +2,6 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 export const ASSET_MAP = {
-  // Buildings
   hotel: "/models/buildings/hotel.glb",
   saloon: "/models/buildings/saloon.glb",
   bank: "/models/buildings/bank.glb",
@@ -13,12 +12,10 @@ export const ASSET_MAP = {
   house: "/models/buildings/house.glb",
   settlement: "/models/buildings/settlement.glb",
 
-  // Structures
   windmill: "/models/structures/windmill.glb",
   water_tower: "/models/structures/water_tower.glb",
   well: "/models/structures/well.glb",
 
-  // Props
   cart: "/models/props/cart.glb",
   barrel: "/models/props/barrel.glb",
   bench: "/models/props/bench.glb",
@@ -27,15 +24,12 @@ export const ASSET_MAP = {
   fence: "/models/props/fence.glb",
   telegraph_pole: "/models/props/telegraph_pole.glb",
 
-  // Environment
   cloud: "/models/environment/cloud.glb",
   tumbleweed: "/models/environment/tumbleweed.glb",
   terrain: "/models/environment/terrain.glb",
 
-  // Characters & Movement
   anim_walk: "/models/movement/walk.glb",
 
-  // Modular Character Parts
   npc_armature: "/models/npc/modular/armature/armature.glb",
   npc_head_default: "/models/npc/modular/heads/head_default.glb",
   npc_head_cowboy: "/models/npc/modular/heads/cowboy_head.glb",
@@ -119,7 +113,6 @@ export async function createWindmill(
   return { model, update };
 }
 
-// Export Model Object Factory & System
 export {
   createModelObject,
   initModels,

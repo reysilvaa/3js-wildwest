@@ -166,7 +166,6 @@ export async function requestAIDialogue(request: DialogueRequest): Promise<strin
     const content = data.choices?.[0]?.message?.content?.trim();
 
     if (content && content.length > 0) {
-      // Clean up any extraneous quotes or formatting
       const cleaned = content.replace(/^["']|["']$/g, "").replace(/\n.*/g, "").trim();
       return cleaned.slice(0, 100);
     }

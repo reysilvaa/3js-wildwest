@@ -22,30 +22,25 @@ export interface ModelObject {
   readonly animations: Map<string, THREE.AnimationClip>;
   readonly mixer: THREE.AnimationMixer | null;
 
-  // Transform controls
   setPosition(x: number, y: number, z: number): ModelObject;
   setRotation(x: number, y: number, z: number): ModelObject;
   setQuaternion(x: number, y: number, z: number, w: number): ModelObject;
   setScale(s: number | [number, number, number]): ModelObject;
 
-  // Material & visual styling
   setEmissive(color: number | THREE.Color, intensity: number): ModelObject;
   setRoughness(roughness: number): ModelObject;
   setMetalness(metalness: number): ModelObject;
   setOpacity(opacity: number): ModelObject;
   setShadows(cast: boolean, receive: boolean): ModelObject;
 
-  // Hierarchy & Queries
   getChild(name: string): THREE.Object3D | null;
   getMesh(name: string): THREE.Mesh | null;
   getCenter(target?: THREE.Vector3): THREE.Vector3;
   getSize(target?: THREE.Vector3): THREE.Vector3;
 
-  // Animation controls
   playAnimation(name?: string, loop?: boolean): THREE.AnimationAction | null;
   stopAnimations(): ModelObject;
 
-  // Lifecycle
   addTo(parent: THREE.Object3D): ModelObject;
   remove(): ModelObject;
   update(dt: number): void;
@@ -145,7 +140,6 @@ export async function createModelObject(
     }
   });
 
-  // Setup Animations
   const animations = new Map<string, THREE.AnimationClip>();
   let mixer: THREE.AnimationMixer | null = null;
   if (gltf.animations && gltf.animations.length > 0) {
@@ -155,7 +149,6 @@ export async function createModelObject(
     }
   }
 
-  // Initial Transform
   if (options.position) {
     if (Array.isArray(options.position)) root.position.set(...options.position);
     else root.position.copy(options.position);
@@ -279,7 +272,6 @@ export async function createModelObject(
       if (clipName) {
         clip = animations.get(clipName);
         if (!clip) {
-          // Case-insensitive lookup
           for (const [k, v] of animations.entries()) {
             if (k.toLowerCase() === clipName.toLowerCase()) {
               clip = v;

@@ -207,7 +207,6 @@ export function initWeather(
     hemiLight.groundColor.lerp(p.hemiGround, lerpSpeed);
     hemiLight.intensity += (p.hemiIntensity - hemiLight.intensity) * lerpSpeed;
 
-    // Indoor lighting target
     let targetIndoor = 0;
     if (timeOfDay === "night" && condition === "rain") targetIndoor = 1.0;
     else if (timeOfDay === "night") targetIndoor = 0.85;

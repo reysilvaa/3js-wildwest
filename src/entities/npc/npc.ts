@@ -149,7 +149,6 @@ export function initNPC(
     staticBoxes?: { min: [number, number, number]; max: [number, number, number] }[];
   }
 
-  // Fallback defaults for immediate sync safety
   const activities: TownActivity[] = [
     {
       name: "Saloon Porch",
@@ -166,7 +165,6 @@ export function initNPC(
 
   const staticBoxes: THREE.Box3[] = [];
 
-  // Load external NPC navigation, schedule, and collision data
   fetch(dataUrl)
     .then((res) => (res.ok ? res.json() : {}))
     .then((data: NPCDataConfig) => {
@@ -250,7 +248,6 @@ export function initNPC(
     }
 
     const pushRandomizedNode = (baseNode: THREE.Vector3) => {
-      // Dynamic random lateral variation constrained within street boundaries [7.6, 12.4]
       const lateralJitter = (Math.random() - 0.5) * 1.2;
       const targetX = Math.max(7.6, Math.min(12.4, baseNode.x + laneBias + lateralJitter));
       const targetZ = baseNode.z + (Math.random() - 0.5) * 1.2;
@@ -275,7 +272,6 @@ export function initNPC(
       }
     }
 
-    // Destination waypoint with subtle organic jitter near destination spot
     const destJitter = new THREE.Vector3((Math.random() - 0.5) * 0.7, 0, (Math.random() - 0.5) * 0.7);
     const destCandidate = destination.clone().add(destJitter);
     pathQueue.push(!checkCollision(destCandidate, 0.46) ? destCandidate : destination.clone());
@@ -293,7 +289,6 @@ export function initNPC(
       if (b.intersectsBox(npcBox)) return true;
     }
 
-    // Solid collision check against other active NPCs
     for (const other of registeredNPCs) {
       if (other.id === npcId) continue;
       const oPos = other.getPosition();
@@ -334,7 +329,6 @@ export function initNPC(
     applyBoxes(buildingBoxes);
     applyBoxes(staticBoxes);
 
-    // Mutual NPC solid body separation
     for (const other of registeredNPCs) {
       if (other.id === npcId) continue;
       const oPos = other.getPosition();
@@ -380,7 +374,6 @@ export function initNPC(
   }
 
   function advanceToNextActivity() {
-    // Non-linear organic activity selection: choose random different destination
     const candidateIndices: number[] = [];
     for (let i = 0; i < activities.length; i++) {
       if (i !== currentActivityIndex) candidateIndices.push(i);
@@ -389,7 +382,6 @@ export function initNPC(
     currentActivityIndex = nextIdx;
 
     const baseAct = activities[currentActivityIndex]!;
-    // Subtle organic jitter around destination
     const destJitter = new THREE.Vector3(
       (Math.random() - 0.5) * 0.8,
       0,
@@ -410,8 +402,7 @@ export function initNPC(
 
   const gltfLoader = new GLTFLoader();
 
-  // Skinned Model Instance
-  // Load 3D Skinned Model (Human scale 0.85 to fit modular buildings & doorframes)
+  // Human scale 0.85 to fit modular buildings & doorframes
   const randConfig = getRandomModularConfig();
   let headUrl = randConfig.headUrl;
   if (modularHead === "jokowi") {
@@ -529,9 +520,6 @@ export function initNPC(
       return;
     }
 
-    // -------------------------------------------------------------
-    // 1. Social Player Awareness & State Transitions
-    // -------------------------------------------------------------
     let playerNearby = false;
     if (camera) {
       const distToPlayer = camera.position.distanceTo(currentPos);
@@ -608,7 +596,6 @@ export function initNPC(
           pathQueue.shift();
         }
         if (pathQueue.length === 0) {
-          // Arrived at activity spot!
           state = "ACTIVITY";
           fadeToAction("Idle", 0.35);
           stuckTimer = 0;
@@ -619,13 +606,11 @@ export function initNPC(
       } else {
         dirVec.normalize();
 
-        // Lookahead collision avoidance: probe 1.15m in front for walls & approaching NPCs
         let steerDir = dirVec.clone();
         const lookaheadDist = 1.15;
         const probeFront = currentPos.clone().add(steerDir.clone().multiplyScalar(lookaheadDist));
 
         if (checkCollision(probeFront, 0.46)) {
-          // Probe left & right whisker angles to steer clear of walls & other NPCs
           const angles = [Math.PI / 4, -Math.PI / 4, Math.PI / 2, -Math.PI / 2, (3 * Math.PI) / 4, (-3 * Math.PI) / 4];
           for (const angle of angles) {
             const candidate = dirVec.clone().applyAxisAngle(yAxis, angle);
@@ -641,7 +626,6 @@ export function initNPC(
         targetRotation.setFromAxisAngle(yAxis, moveAngle);
         model.root.quaternion.slerp(targetRotation, Math.min(1, 6 * dt));
 
-        // Advance position with wall sliding fallback
         const stepDist = walkSpeed * dt;
         const step = steerDir.clone().multiplyScalar(stepDist);
         const nextPos = currentPos.clone().add(step);
@@ -658,7 +642,6 @@ export function initNPC(
           }
         }
 
-        // Stuck detection & animation state synchronization
         const movedDist = currentPos.distanceTo(lastPos);
         lastPos.copy(currentPos);
 
@@ -668,7 +651,6 @@ export function initNPC(
             fadeToAction("Idle", 0.2);
           }
           if (stuckTimer > 0.8) {
-            // Unstick: pop blocked intermediate node or replan
             if (pathQueue.length > 1) {
               pathQueue.shift();
             } else {
@@ -685,9 +667,6 @@ export function initNPC(
       }
     }
 
-    // -------------------------------------------------------------
-    // 2. Terrain Height & Collision Resolution for NPC Root
-    // -------------------------------------------------------------
     const centerElev = getGroundElevation(currentPos.x, currentPos.z);
     currentPos.y = centerElev.height;
     resolvePenetration(currentPos, 0.46);

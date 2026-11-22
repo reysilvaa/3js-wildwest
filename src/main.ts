@@ -13,23 +13,16 @@ import { initBubbleChat } from "./ui/bubble-chat.js";
 import { initConversationManager } from "./entities/npc/conversation.js";
 import { initTumbleweeds } from "./entities/tumbleweed.js";
 
-// 1. Scene, Camera, Renderer, Controls & Lighting
 const { scene, camera, renderer, controls, sunLight, hemiLight } = initScene();
-
-// 2. Camera WASD & Terrain Elevation Controller
 const cameraController = initCameraController(camera, controls);
-
-// 3. Audio Manager
 const audio = initAudio();
 
-// 4. World Collisions & Terrain Expanse
 const buildingBoxes: THREE.Box3[] = [];
 const ground = initDesertGround(scene);
 const world = loadWorld(scene, controls, camera, renderer, buildingBoxes);
 const clouds = initClouds(scene);
 const tumbleweeds = initTumbleweeds(scene);
 
-// 5. Dynamic Weather (Sun, Moon, Rain, Presets & HUD Controls)
 const weather = initWeather(scene, sunLight, hemiLight, {
   camera,
   buildingBoxes,
@@ -40,14 +33,11 @@ const weather = initWeather(scene, sunLight, hemiLight, {
 });
 audio.setTimeOfDay(weather.getState().timeOfDay);
 
-// 6. Sound Toggle UI (integrated into header bar)
 initAudioUI({
   onToggleMute: () => audio.toggleMute(),
   isMuted: () => audio.isMuted(),
 });
 
-// 7. Intelligent Town NPCs (Jokowi Roaming + Frontier Cowboy Guard)
-// 7. Intelligent Town NPCs (5 Procedurally Generated Modular Residents)
 const NPC_SPAWN_SPOTS: [number, number, number][] = [
   [13.2, 0.45, -7.5], // Saloon Porch
   [6.8, 0.45, 7.0],   // Bank Steps
@@ -72,11 +62,9 @@ const npcs = NPC_SPAWN_SPOTS.map((pos, i) =>
   })
 );
 
-// 8. Inter-NPC Speech Bubble & Autonomous AI Dialogue System
 const bubbleChat = initBubbleChat({ camera, headOffsetY: 1.45 });
 const conversations = initConversationManager(npcs, bubbleChat);
 
-// Diagnostic quick-inspection hook on window
 (window as unknown as Record<string, unknown>).__npcs = npcs;
 (window as unknown as Record<string, unknown>).triggerConversation = (i = 0, j = 1) => {
   const a = npcs[i];
@@ -101,7 +89,6 @@ const conversations = initConversationManager(npcs, bubbleChat);
   return inspectNPC(npc.model);
 };
 
-// 9. Clean Declarative Game Loop
 const clock = new THREE.Clock();
 
 function animate() {

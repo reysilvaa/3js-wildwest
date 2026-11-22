@@ -46,7 +46,6 @@ export function initDesertGround(scene: THREE.Scene, options: GroundOptions = {}
     flatRadius = 50,
   } = options;
 
-  // 1. Procedural Sand Dunes Geometry
   const geo = new THREE.PlaneGeometry(size, size, segments, segments);
   geo.rotateX(-Math.PI / 2);
 
@@ -87,7 +86,6 @@ export function initDesertGround(scene: THREE.Scene, options: GroundOptions = {}
   geo.computeVertexNormals();
   geo.setAttribute("uv2", geo.getAttribute("uv"));
 
-  // 2. Texture Loader & Normalized PBR Texture Set Helper
   const texLoader = new THREE.TextureLoader();
 
   function loadPbrSet(folder: string, repX: number, repY = repX) {
@@ -130,7 +128,6 @@ export function initDesertGround(scene: THREE.Scene, options: GroundOptions = {}
   mesh.receiveShadow = true;
   scene.add(mesh);
 
-  // 3. Authentic Wild West Town Street Mud & Water Puddles
   const streetGeo = new THREE.PlaneGeometry(54, 88, 2, 2);
   streetGeo.rotateX(-Math.PI / 2);
   streetGeo.translate(10, 0.014, -7);

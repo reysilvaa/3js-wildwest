@@ -8,10 +8,10 @@ export interface ModularPartsConfig {
   hairUrl?: string;
   bodyUrl?: string;
   outfitUrl?: string;
-  accessoryUrl?: string;  // Topi (Hat)
-  bandanaUrl?: string;    // Syal (Bandana)
-  holsterUrl?: string;    // Sabuk & Pistol (Gun Holster)
-  bootsUrl?: string;      // Sepatu Boots (Boots & Spurs)
+  accessoryUrl?: string;
+  bandanaUrl?: string;
+  holsterUrl?: string;
+  bootsUrl?: string;
   outfitColor?: number | THREE.Color;
 }
 
@@ -86,7 +86,6 @@ export function getRandomModularConfig(): Required<ModularPartsConfig> {
   const isFrontier = Math.random() < 0.75;
   const archetype = isFrontier ? NPC_ARCHETYPES[0]! : NPC_ARCHETYPES[1]!;
   
-  // Pick head
   let headUrl: string;
   let hasIntegratedHat = false;
   if (isFrontier) {
@@ -97,10 +96,8 @@ export function getRandomModularConfig(): Required<ModularPartsConfig> {
     headUrl = NPC_ARCHETYPES[1].headUrl;
   }
 
-  // Pick procedural dye color from archetype palette
   const outfitColor = archetype.allowedColors[Math.floor(Math.random() * archetype.allowedColors.length)]!;
 
-  // Hat: only attach if head does not already have a molded hat
   const wearsHat = Math.random() < 0.70;
   const pickedHat = MODULAR_HATS[Math.floor(Math.random() * MODULAR_HATS.length)]!;
   const accessoryUrl = (!hasIntegratedHat && wearsHat) ? pickedHat : "";
@@ -150,7 +147,6 @@ export async function assembleModularCharacter(
   const bodyUrl = config.bodyUrl || "/models/npc/modular/bodies/body_hands.glb";
   const headUrl = config.headUrl || "/models/npc/modular/heads/cowboy_head.glb";
 
-  // 1. Base Outfit (Master Armature and Clothes)
   const outfitGltf = await loader.loadAsync(outfitUrl);
   const root = SkeletonUtils.clone(outfitGltf.scene) as THREE.Group;
 
@@ -236,16 +232,14 @@ export async function assembleModularCharacter(
     }
   };
 
-  // 2. Attach Body Hands (outfit_arthur already includes its own modeled hands & arms)
+  // outfit_arthur already includes modeled hands & arms
   const hasHands = outfitUrl.includes("outfit_arthur");
   if (!hasHands) {
     await attachPartFromUrl(bodyUrl, "Hands");
   }
 
-  // 3. Attach Head / Face
   await attachPartFromUrl(headUrl, "Head");
 
-  // 4. Attach Accessories (Topi, Syal/Bandana, Sabuk/Pistol, Sepatu Boots)
   // Prevent duplicate hat & bandana if head already contains integrated accessories
   const hasHeadAccessories = headUrl.includes("cowboy_head") || headUrl.includes("outlaw_head");
   if (config.accessoryUrl && !hasHeadAccessories) {
@@ -257,14 +251,12 @@ export async function assembleModularCharacter(
   if (config.holsterUrl) await attachPartFromUrl(config.holsterUrl, "GunHolster");
   if (config.bootsUrl) await attachPartFromUrl(config.bootsUrl, "Boots");
 
-  // 5. Configure Shadows & Normalize PBR Face Lighting
   const materials: THREE.MeshStandardMaterial[] = [];
   root.traverse((child) => {
     if ((child as THREE.Mesh).isMesh) {
       const mesh = child as THREE.Mesh;
       const meshName = mesh.name.toLowerCase();
 
-      // Check if mesh belongs to facial geometry or head
       const isFaceMesh =
         meshName.includes("head") ||
         meshName.includes("avatarhead") ||
@@ -283,7 +275,6 @@ export async function assembleModularCharacter(
         mesh.receiveShadow = options.receiveShadow ?? true;
       }
 
-      // Tint base outfit mesh if requested (tint suits jackets, and tint Arthur's shirt)
       if (config.outfitColor !== undefined && meshName.includes("outfit")) {
         const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
         const newMats: THREE.Material[] = [];
@@ -328,7 +319,6 @@ export async function assembleModularCharacter(
     }
   });
 
-  // 6. Transform Configuration
   if (options.position) {
     if (Array.isArray(options.position)) root.position.set(...options.position);
     else root.position.copy(options.position);
@@ -341,7 +331,6 @@ export async function assembleModularCharacter(
     parentScene.add(root);
   }
 
-  // 7. Animation Setup & ModelObject Contract
   const mixer = new THREE.AnimationMixer(root);
   const animations = new Map<string, THREE.AnimationClip>();
   if (outfitGltf.animations) {

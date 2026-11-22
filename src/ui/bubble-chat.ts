@@ -230,14 +230,12 @@ export class BubbleChatManager {
     const bgImage = options?.bgImageUrl ?? (isProcedural ? undefined : this.defaultBgImage);
     const offsetY = options?.offsetY ?? this.headOffsetY;
 
-    // Remove existing bubble with the same ID
     this.hide(id);
 
     const bubbleEl = document.createElement("div");
     bubbleEl.style.opacity = "0";
 
     if (bgImage && !isProcedural) {
-      // Mode 1: High-fidelity transparent template
       bubbleEl.className = "rdr2-bubble rdr2-bubble-frame-mode";
       bubbleEl.style.backgroundImage = `url('${bgImage}')`;
       bubbleEl.innerHTML = `
@@ -245,7 +243,6 @@ export class BubbleChatManager {
         <div class="rdr2-bubble-text">${text}</div>
       `;
     } else {
-      // Mode 2: Procedural Kertas Minyak (Oiled Parchment)
       bubbleEl.className = "rdr2-bubble rdr2-bubble-procedural-mode";
       bubbleEl.innerHTML = `
         <div class="rdr2-bubble-parchment-oil">
@@ -338,13 +335,11 @@ export class BubbleChatManager {
     for (const [id, bubble] of this.activeBubbles.entries()) {
       bubble.elapsed += dt;
 
-      // Lifespan expiration check
       if (bubble.elapsed >= bubble.duration) {
         this.hide(id);
         continue;
       }
 
-      // 1. Resolve 3D World Position
       if (bubble.target instanceof THREE.Object3D) {
         bubble.target.getWorldPosition(this.tempPos);
       } else if (typeof bubble.target === "function") {
@@ -355,21 +350,18 @@ export class BubbleChatManager {
 
       this.tempPos.y += bubble.offsetY;
 
-      // 2. Distance Culling
       const dist = this.tempPos.distanceTo(cam.position);
       if (dist > bubble.maxDistance || dist < this.minDistance) {
         bubble.element.style.display = "none";
         continue;
       }
 
-      // 3. Frustum & Behind Camera Check (Dot Product & NDC)
       this.rayDir.subVectors(this.tempPos, cam.position);
       if (this.rayDir.dot(this.camForward) <= 0) {
         bubble.element.style.display = "none";
         continue;
       }
 
-      // Line of sight Raycasting check
       if (runOcclusion) {
         const rayLen = this.rayDir.length();
         this.raycaster.set(cam.position, this.rayDir.normalize());
@@ -386,7 +378,6 @@ export class BubbleChatManager {
         continue;
       }
 
-      // 4. Project 3D vector to Screen NDC
       this.tempPos.project(cam);
 
       if (
@@ -399,14 +390,11 @@ export class BubbleChatManager {
         continue;
       }
 
-      // 5. Convert NDC [-1, 1] to Screen Pixels [0, W / H]
       const screenX = (this.tempPos.x * 0.5 + 0.5) * width;
       const screenY = (-(this.tempPos.y * 0.5) + 0.5) * height;
 
-      // 6. Smooth distance scaling
       const scale = Math.max(0.68, Math.min(1.08, 1.15 - dist * 0.016));
 
-      // 7. Opacity transitions (Fade in at start, fade out near end or max distance)
       let opacity = 1.0;
       if (bubble.elapsed < 0.22) {
         opacity = bubble.elapsed / 0.22;
@@ -422,9 +410,7 @@ export class BubbleChatManager {
       bubble.element.style.display = "block";
       bubble.element.style.opacity = opacity.toFixed(3);
 
-      // 8. Transform GPU
-      // Mode 1: Tail tip in bubble-frame.png is exactly at 13.27% X, 99.3% Y
-      // Mode 2: Procedural tail is at 24px from left, bottom
+      // Tail tip in bubble-frame.png is at 13.27% X, 99.3% Y
       if (bubble.bgImageUrl && !bubble.isProcedural) {
         bubble.element.style.transform = `translate3d(${screenX}px, ${screenY}px, 0) translate(-13.27%, -99.3%) scale(${scale})`;
       } else {

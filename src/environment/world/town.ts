@@ -60,7 +60,6 @@ export function loadWorld(
   const indoorLights: { light: THREE.PointLight; maxIntensity: number }[] = [];
   const windowSpillLights: { light: THREE.SpotLight; maxIntensity: number }[] = [];
 
-  // Load all modular town lighting from external configuration
   fetch("/models/town_lights.json")
     .then((res) => (res.ok ? res.json() : {}))
     .then((data: TownLightsConfig) => {
@@ -102,7 +101,6 @@ export function loadWorld(
   const progressEl = document.getElementById("progress");
   const statusEl = document.getElementById("status-text");
 
-  // Load modular town layout from categorized GLB models
   fetch(layoutUrl)
     .then((res) => {
       if (!res.ok) throw new Error(`HTTP error ${res.status}`);
@@ -122,7 +120,6 @@ export function loadWorld(
           // Force full world matrix update so setFromObject uses exact world coordinates
           model.updateMatrixWorld(true);
 
-          // Track windmill blades for continuous spinning
           if (inst.asset === "windmill") {
             windmillBlades =
               model.getObjectByName("Cylinder005") ||
@@ -151,7 +148,6 @@ export function loadWorld(
               mesh.castShadow = isBuilding && !mesh.name.includes("Cylinder005");
               mesh.frustumCulled = true;
 
-              // Configure PBR reflections for realistic sunlight & lamp bounce
               const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
               for (const mat of mats) {
                 if (mat && (mat as THREE.MeshStandardMaterial).isMeshStandardMaterial) {
@@ -172,11 +168,9 @@ export function loadWorld(
                     stdMat.name.includes("Bell") ||
                     stdMat.name.includes("Chimney")
                   ) {
-                    // Metallic props: crisp metallic reflection
                     stdMat.roughness = 0.35;
                     stdMat.metalness = 0.82;
                   } else {
-                    // Weathered timber & ground: realistic diffuse scatter with subtle specular
                     stdMat.roughness = 0.82;
                     stdMat.metalness = 0.04;
                   }

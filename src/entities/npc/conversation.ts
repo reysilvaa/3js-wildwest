@@ -20,7 +20,7 @@ export function initConversationManager(
   bubbleChat: BubbleChatSystem
 ): ConversationManager {
   let activeDialogue: ActiveDialogue | null = null;
-  let checkTimer = 3.0; // Check proximity every 2-3 seconds
+  let checkTimer = 3.0;
   const pairCooldowns: Map<string, number> = new Map();
   let soloAmbientTimer = 12.0;
 
@@ -32,19 +32,16 @@ export function initConversationManager(
     if (activeDialogue) return;
 
     const pairKey = getPairKey(npcA, npcB);
-    pairCooldowns.set(pairKey, 30.0); // 30s cooldown before these two talk again
+    pairCooldowns.set(pairKey, 30.0);
 
-    // Face each other
     npcA.faceTarget(npcB.getPosition(), 10.0);
     npcB.faceTarget(npcA.getPosition(), 10.0);
 
-    // Pause movement during conversation
     npcA.pause(9.5);
     npcB.pause(9.5);
 
     const location = npcA.getCurrentActivity() || "Town Street";
 
-    // Request opening line for A
     const lineA = await requestAIDialogue({
       speaker: npcA.name,
       listener: npcB.name,
@@ -75,19 +72,16 @@ export function initConversationManager(
   }
 
   function update(dt: number) {
-    // 1. Advance Pair Cooldowns
     for (const [key, cd] of pairCooldowns.entries()) {
       const nextCd = cd - dt;
       if (nextCd <= 0) pairCooldowns.delete(key);
       else pairCooldowns.set(key, nextCd);
     }
 
-    // 2. Advance Active Dialogue State Machine
     if (activeDialogue) {
       activeDialogue.stepTimer -= dt;
 
       if (activeDialogue.step === "A_SPEAKING" && activeDialogue.stepTimer <= 0) {
-        // Step B: Listener responds to Speaker A
         const { npcA, npcB, lineA } = activeDialogue;
         activeDialogue.step = "B_SPEAKING";
         activeDialogue.stepTimer = 4.4;
@@ -102,12 +96,10 @@ export function initConversationManager(
           bubbleChat.showBubble(npcB.id, npcB.name, lineB, () => npcB.getPosition(), 4.2);
         });
       } else if (activeDialogue.step === "B_SPEAKING" && activeDialogue.stepTimer <= 0) {
-        // Finished conversation!
         activeDialogue = null;
       }
     }
 
-    // 3. Proximity Check for Natural Conversations
     checkTimer -= dt;
     if (checkTimer <= 0 && !activeDialogue) {
       checkTimer = 2.5;
@@ -118,7 +110,6 @@ export function initConversationManager(
           const b = npcs[j]!;
 
           const dist = a.getPosition().distanceTo(b.getPosition());
-          // When two NPCs are within 3.8 meters of each other
           if (dist < 3.8) {
             const pairKey = getPairKey(a, b);
             if (!pairCooldowns.has(pairKey)) {
@@ -130,11 +121,9 @@ export function initConversationManager(
       }
     }
 
-    // 4. Occasional Solo Ambient Mutter
     soloAmbientTimer -= dt;
     if (soloAmbientTimer <= 0 && !activeDialogue) {
       soloAmbientTimer = 18.0 + Math.random() * 12.0;
-      // Pick random stationary or activity NPC
       const eligible = npcs.filter((n) => n.getState() === "ACTIVITY" && !n.isPaused());
       if (eligible.length > 0) {
         const picked = eligible[Math.floor(Math.random() * eligible.length)]!;

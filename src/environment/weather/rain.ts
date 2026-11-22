@@ -86,7 +86,6 @@ export function initRain(scene: THREE.Scene, onThunder?: () => void): RainSystem
     const posAttr = rainGeo.getAttribute("position") as THREE.BufferAttribute;
     posAttr.needsUpdate = true;
 
-    // Lightning Flash
     lightningTimer -= dt;
     if (lightningTimer <= 0) {
       lightningFlash = 0.12;
