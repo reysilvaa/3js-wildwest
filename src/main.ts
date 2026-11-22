@@ -9,13 +9,13 @@ import { initAudio } from "./core/audio.js";
 import { initNPC } from "./entities/npc.js";
 
 // Initialize Scene, Camera, Renderer, Controls & Lighting
-const { scene, camera, renderer, controls, sunLight, hemiLight, flare } = initScene();
+const { scene, camera, renderer, controls, sunLight, hemiLight } = initScene();
 
 // Shared solid building collision boxes
 const buildingBoxes: THREE.Box3[] = [];
 
 // Initialize Expansive Desert Ground Expanse (seamless horizon dunes & procedural sand)
-initDesertGround(scene);
+const ground = initDesertGround(scene);
 
 // Load Wild West Town environment (with interactive windmill)
 const world = loadWorld(scene, controls, camera, renderer, buildingBoxes);
@@ -27,8 +27,10 @@ const tumbleweeds = initTumbleweeds(scene);
 // Initialize Audio System (Day BGM: /bgm/day.ogg, Rain: /bgm/weather/rain.ogg, Thunder: /bgm/weather/thunder.ogg)
 const audio = initAudio();
 
-// Initialize Dynamic Weather System (Day/Night cycle, Rain particles, Lightning, Audio synchronization, Indoor lighting)
-const weather = initWeather(scene, sunLight, hemiLight, flare, {
+// Initialize Dynamic Weather System (Day/Night cycle, Rain particles, Lightning, Audio synchronization, Celestial Sun & Lensflare)
+const weather = initWeather(scene, sunLight, hemiLight, undefined, {
+  camera,
+  buildingBoxes,
   onTimeChange: (time) => audio.setDayTime(time !== "night"),
   onConditionChange: (condition) => audio.setRain(condition === "rain"),
   onThunder: () => audio.playThunder(),
@@ -92,6 +94,7 @@ function animate() {
     controls.target.y += diff;
   }
 
+  ground.update(dt, weather.getState().condition === "rain");
   world.update(dt);
   weather.update(dt);
   audio.update(dt);

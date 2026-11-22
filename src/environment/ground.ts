@@ -7,7 +7,35 @@ export interface GroundOptions {
   flatRadius?: number;
 }
 
-export function initDesertGround(scene: THREE.Scene, options: GroundOptions = {}): THREE.Mesh {
+export interface GroundSystem {
+  mesh: THREE.Mesh;
+  puddleMesh: THREE.Object3D | null;
+  update: (dt: number, isRaining: boolean) => void;
+}
+
+function createSoftAlphaMap(): THREE.CanvasTexture {
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext("2d");
+  if (ctx) {
+    ctx.fillStyle = "black";
+    ctx.fillRect(0, 0, 256, 256);
+
+    const radGrad = ctx.createRadialGradient(128, 128, 40, 128, 128, 122);
+    radGrad.addColorStop(0, "rgba(255, 255, 255, 1.0)");
+    radGrad.addColorStop(0.6, "rgba(255, 255, 255, 0.85)");
+    radGrad.addColorStop(1, "rgba(255, 255, 255, 0.0)");
+    ctx.fillStyle = radGrad;
+    ctx.fillRect(0, 0, 256, 256);
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.ClampToEdgeWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  return tex;
+}
+
+export function initDesertGround(scene: THREE.Scene, options: GroundOptions = {}): GroundSystem {
   const {
     size = 1200,
     segments = 64,
@@ -58,68 +86,106 @@ export function initDesertGround(scene: THREE.Scene, options: GroundOptions = {}
   }
 
   geo.computeVertexNormals();
+  geo.setAttribute("uv2", geo.getAttribute("uv"));
 
-  // 2. High-Quality Procedural Sand Canvas Texture with wind ripple lines
-  const canvas = document.createElement("canvas");
-  canvas.width = 256;
-  canvas.height = 256;
-  const ctx = canvas.getContext("2d");
+  // 2. Texture Loader & Normalized PBR Texture Set Helper
+  const texLoader = new THREE.TextureLoader();
 
-  if (ctx) {
-    // Base sand gradient
-    const grad = ctx.createLinearGradient(0, 0, 256, 256);
-    grad.addColorStop(0, "#d8a470");
-    grad.addColorStop(0.5, "#ce9864");
-    grad.addColorStop(1, "#c58e5a");
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 256, 256);
-
-    // Subtle desert wind ripple waves
-    ctx.strokeStyle = "rgba(180, 130, 80, 0.25)";
-    ctx.lineWidth = 1.5;
-    for (let y = 0; y < 256; y += 8) {
-      ctx.beginPath();
-      for (let x = 0; x <= 256; x += 16) {
-        const wave = Math.sin(x * 0.05 + y * 0.1) * 3;
-        if (x === 0) ctx.moveTo(x, y + wave);
-        else ctx.lineTo(x, y + wave);
-      }
-      ctx.stroke();
-    }
-
-    // Granular sand speckle noise
-    const imgData = ctx.getImageData(0, 0, 256, 256);
-    const data = imgData.data;
-    for (let i = 0; i < data.length; i += 4) {
-      const noise = (Math.random() - 0.5) * 18;
-      // SAFETY: Clamping byte color values
-      data[i + 0] = Math.min(255, Math.max(0, (data[i + 0] ?? 200) + noise));
-      data[i + 1] = Math.min(255, Math.max(0, (data[i + 1] ?? 150) + noise * 0.8));
-      data[i + 2] = Math.min(255, Math.max(0, (data[i + 2] ?? 100) + noise * 0.6));
-    }
-    ctx.putImageData(imgData, 0, 0);
+  function loadPbrSet(folder: string, repX: number, repY = repX) {
+    const load = (name: string, isColor = false): THREE.Texture => {
+      const tex = texLoader.load(`${folder}/${name}.jpg`);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(repX, repY);
+      if (isColor) tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    };
+    return {
+      color: load("color", true),
+      normal: load("normal"),
+      roughness: load("roughness"),
+      ao: load("ao"),
+    };
   }
 
-  const sandTexture = new THREE.CanvasTexture(canvas);
-  sandTexture.wrapS = THREE.RepeatWrapping;
-  sandTexture.wrapT = THREE.RepeatWrapping;
-  sandTexture.repeat.set(120, 120);
+  const sand = loadPbrSet("/models/ground/sand", 120);
+  const mud = loadPbrSet("/models/ground/mud", 6, 10);
 
-  // 3. PBR Desert Sand Material
-  const mat = new THREE.MeshStandardMaterial({
-    map: sandTexture,
-    color: new THREE.Color(0xd29d66),
+  const drySandColor = new THREE.Color(0xdab47c);
+  const wetSandColor = new THREE.Color(0x7c5836);
+
+  const sandMat = new THREE.MeshStandardMaterial({
+    map: sand.color,
+    normalMap: sand.normal,
+    normalScale: new THREE.Vector2(0.9, 0.9),
+    roughnessMap: sand.roughness,
+    aoMap: sand.ao,
+    color: drySandColor.clone(),
     roughness: 0.94,
-    metalness: 0.02,
-    envMapIntensity: 0.8,
+    metalness: 0.0,
+    envMapIntensity: 0.5,
   });
 
-  const mesh = new THREE.Mesh(geo, mat);
+  const mesh = new THREE.Mesh(geo, sandMat);
   mesh.name = "DesertGroundExpanse";
   mesh.receiveShadow = true;
   scene.add(mesh);
 
-  return mesh;
+  // 3. Authentic Wild West Town Street Mud & Water Puddles
+  const streetGeo = new THREE.PlaneGeometry(54, 88, 32, 32);
+  streetGeo.rotateX(-Math.PI / 2);
+  streetGeo.translate(10, 0.014, -7);
+  streetGeo.setAttribute("uv2", streetGeo.getAttribute("uv"));
+
+  const softAlphaTex = createSoftAlphaMap();
+
+  const mudStreetMat = new THREE.MeshStandardMaterial({
+    map: mud.color,
+    normalMap: mud.normal,
+    normalScale: new THREE.Vector2(1.1, 1.1),
+    roughnessMap: mud.roughness,
+    aoMap: mud.ao,
+    alphaMap: softAlphaTex,
+    transparent: true,
+    opacity: 0.0,
+    depthWrite: false,
+    roughness: 0.28,
+    metalness: 0.04,
+    envMapIntensity: 2.2, // Gives specular sky reflections on water puddle areas
+  });
+
+  const mudStreetMesh = new THREE.Mesh(streetGeo, mudStreetMat);
+  mudStreetMesh.name = "TownStreetMudPuddles";
+  mudStreetMesh.receiveShadow = true;
+  mudStreetMesh.visible = false;
+  scene.add(mudStreetMesh);
+
+  let wetness = 0; // 0 (dry no rain) -> 1 (full rain accumulation)
+
+  function update(dt: number, isRaining: boolean): void {
+    const targetWetness = isRaining ? 1.0 : 0.0;
+    const transitionRate = (isRaining ? 0.35 : 0.16) * dt;
+
+    if (Math.abs(wetness - targetWetness) > 0.005) {
+      wetness += Math.sign(targetWetness - wetness) * Math.min(transitionRate, Math.abs(targetWetness - wetness));
+    } else {
+      wetness = targetWetness;
+    }
+
+    // Dynamic desert sand darkening & damp glossiness during rain
+    sandMat.roughness = THREE.MathUtils.lerp(0.94, 0.65, wetness);
+    sandMat.color.lerpColors(drySandColor, wetSandColor, wetness);
+
+    // Dynamic natural mud & reflective water puddle accumulation in town
+    mudStreetMat.opacity = wetness;
+    mudStreetMesh.visible = wetness > 0.01;
+  }
+
+  return {
+    mesh,
+    get puddleMesh() { return mudStreetMesh; },
+    update,
+  };
 }
 
 export function getGroundHeightOnly(

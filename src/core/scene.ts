@@ -1,6 +1,5 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { Lensflare, LensflareElement } from "three/addons/objects/Lensflare.js";
 
 export interface SceneOptions {
   fogColor?: number;
@@ -16,7 +15,6 @@ export interface SceneContext {
   controls: OrbitControls;
   sunLight: THREE.DirectionalLight;
   hemiLight: THREE.HemisphereLight;
-  flare: Lensflare;
 }
 
 export function initScene(options: SceneOptions = {}): SceneContext {
@@ -71,31 +69,11 @@ export function initScene(options: SceneOptions = {}): SceneContext {
   sunLight.shadow.radius = 1.5;
   scene.add(sunLight);
 
-  // Lightweight procedural lens flare
-  const flareCanvas = document.createElement("canvas");
-  flareCanvas.width = 64;
-  flareCanvas.height = 64;
-  const fCtx = flareCanvas.getContext("2d");
-  if (fCtx) {
-    const grad = fCtx.createRadialGradient(32, 32, 0, 32, 32, 32);
-    grad.addColorStop(0, "rgba(255, 255, 255, 1)");
-    grad.addColorStop(0.3, "rgba(255, 220, 140, 0.5)");
-    grad.addColorStop(1, "rgba(255, 200, 100, 0)");
-    fCtx.fillStyle = grad;
-    fCtx.fillRect(0, 0, 64, 64);
-  }
-  const flareTex = new THREE.CanvasTexture(flareCanvas);
-  const flare = new Lensflare();
-  flare.addElement(new LensflareElement(flareTex, 320, 0, new THREE.Color(0xfff0cc)));
-  flare.addElement(new LensflareElement(flareTex, 70, 0.5, new THREE.Color(0xffaa44)));
-  flare.addElement(new LensflareElement(flareTex, 120, 0.8, new THREE.Color(0xff7722)));
-  sunLight.add(flare);
-
   window.addEventListener("resize", () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
-  return { scene, camera, renderer, controls, sunLight, hemiLight, flare };
+  return { scene, camera, renderer, controls, sunLight, hemiLight };
 }
