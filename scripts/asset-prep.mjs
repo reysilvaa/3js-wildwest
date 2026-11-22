@@ -31,7 +31,7 @@ Commands:
 
 Examples:
   npm run asset:validate public/models/npc/modular/outfits/outfit_arthur.glb
-  npm run asset:modular public/models/npc/modular/arthur_morgan__rdr2_3d_character.glb
+  npm run asset:modular public/models/npc/modular/arthur_morgan_character.glb
 `);
   process.exit(0);
 }

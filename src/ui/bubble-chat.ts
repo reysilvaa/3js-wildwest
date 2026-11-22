@@ -76,24 +76,24 @@ export class BubbleChatManager {
   }
 
   private ensureContainer(): HTMLElement {
-    let el = document.getElementById("rdr2-chat-overlay");
+    let el = document.getElementById("western-chat-overlay");
     if (!el) {
       el = document.createElement("div");
-      el.id = "rdr2-chat-overlay";
-      el.className = "rdr2-chat-overlay";
+      el.id = "western-chat-overlay";
+      el.className = "western-chat-overlay";
       document.body.appendChild(el);
     }
     return el;
   }
 
   private injectStyles(): void {
-    const styleId = "rdr2-bubble-chat-styles";
+    const styleId = "western-bubble-chat-styles";
     if (document.getElementById(styleId)) return;
 
     const style = document.createElement("style");
     style.id = styleId;
     style.textContent = `
-      .rdr2-chat-overlay {
+      .western-chat-overlay {
         position: absolute;
         inset: 0;
         pointer-events: none;
@@ -101,7 +101,7 @@ export class BubbleChatManager {
         z-index: 45;
       }
 
-      .rdr2-bubble {
+      .western-bubble {
         position: absolute;
         top: 0;
         left: 0;
@@ -110,8 +110,8 @@ export class BubbleChatManager {
         transition: opacity 0.22s ease-out;
       }
 
-      /* Mode 1: High-Fidelity Transparent Asset Template (Exact RDR2 Artwork) */
-      .rdr2-bubble-frame-mode {
+      /* Mode 1: High-Fidelity Transparent Asset Template (Exact Western Artwork) */
+      .western-bubble-frame-mode {
         min-width: 210px;
         max-width: 315px;
         background-size: 100% 100%;
@@ -123,14 +123,14 @@ export class BubbleChatManager {
       }
 
       /* Mode 2: Pure Procedural Kertas Minyak (Oiled Parchment) with Distressed Crimson Border */
-      .rdr2-bubble-procedural-mode {
+      .western-bubble-procedural-mode {
         min-width: 180px;
         max-width: 295px;
         filter: drop-shadow(0 12px 26px rgba(0, 0, 0, 0.78));
         transform-origin: 24px bottom;
       }
 
-      .rdr2-bubble-parchment-oil {
+      .western-bubble-parchment-oil {
         position: relative;
         background-color: #dfbe84;
         background-image: 
@@ -151,7 +151,7 @@ export class BubbleChatManager {
       }
 
       /* Inner aged perimeter crease */
-      .rdr2-bubble-parchment-oil::before {
+      .western-bubble-parchment-oil::before {
         content: '';
         position: absolute;
         inset: 1px;
@@ -160,7 +160,7 @@ export class BubbleChatManager {
         pointer-events: none;
       }
 
-      .rdr2-bubble-seam {
+      .western-bubble-seam {
         position: absolute;
         bottom: -3.8px;
         left: 24px;
@@ -170,7 +170,7 @@ export class BubbleChatManager {
         z-index: 2;
       }
 
-      .rdr2-tail-svg {
+      .western-tail-svg {
         position: absolute;
         bottom: -22px;
         left: 18px;
@@ -181,7 +181,7 @@ export class BubbleChatManager {
       }
 
       /* Speaker Name: Vintage Western Bold Crimson Serif */
-      .rdr2-bubble-speaker {
+      .western-bubble-speaker {
         font-family: 'Cinzel', 'Rye', 'Georgia', serif;
         font-size: 15px;
         font-weight: 900;
@@ -194,7 +194,7 @@ export class BubbleChatManager {
       }
 
       /* Dialogue Text: 19th Century Typewriter / Slab Serif */
-      .rdr2-bubble-text {
+      .western-bubble-text {
         font-family: 'Special Elite', 'Courier Prime', 'Courier New', monospace;
         font-size: 14.5px;
         font-weight: 600;
@@ -236,20 +236,20 @@ export class BubbleChatManager {
     bubbleEl.style.opacity = "0";
 
     if (bgImage && !isProcedural) {
-      bubbleEl.className = "rdr2-bubble rdr2-bubble-frame-mode";
+      bubbleEl.className = "western-bubble western-bubble-frame-mode";
       bubbleEl.style.backgroundImage = `url('${bgImage}')`;
       bubbleEl.innerHTML = `
-        <div class="rdr2-bubble-speaker">${speaker}</div>
-        <div class="rdr2-bubble-text">${text}</div>
+        <div class="western-bubble-speaker">${speaker}</div>
+        <div class="western-bubble-text">${text}</div>
       `;
     } else {
-      bubbleEl.className = "rdr2-bubble rdr2-bubble-procedural-mode";
+      bubbleEl.className = "western-bubble western-bubble-procedural-mode";
       bubbleEl.innerHTML = `
-        <div class="rdr2-bubble-parchment-oil">
-          <div class="rdr2-bubble-speaker">${speaker}</div>
-          <div class="rdr2-bubble-text">${text}</div>
-          <div class="rdr2-bubble-seam"></div>
-          <svg class="rdr2-tail-svg" viewBox="0 0 32 24">
+        <div class="western-bubble-parchment-oil">
+          <div class="western-bubble-speaker">${speaker}</div>
+          <div class="western-bubble-text">${text}</div>
+          <div class="western-bubble-seam"></div>
+          <svg class="western-tail-svg" viewBox="0 0 32 24">
             <polygon points="6,0 24,0 4,22" fill="#dfbe84" />
             <path d="M 6 0 L 4 22 L 24 0" fill="none" stroke="#7d1214" stroke-width="3.8" stroke-linejoin="round" stroke-linecap="round" />
           </svg>

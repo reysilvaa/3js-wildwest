@@ -191,9 +191,8 @@ export function loadWorld(
       }
 
       const bbox = new THREE.Box3().setFromObject(townRoot);
-      const center = bbox.getCenter(new THREE.Vector3());
-      controls.target.set(center.x, 1.4, center.z);
-      camera.position.set(center.x + 1.5, 4.2, center.z - 16);
+      controls.target.set(10.0, 1.5, -6.0);
+      camera.position.set(10.0, 14.0, 28.0);
       controls.update();
 
       renderer.shadowMap.needsUpdate = true;

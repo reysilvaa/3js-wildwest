@@ -501,7 +501,7 @@ if __name__ == "__main__":
     else:
         args = []
         
-    input_file = r"d:\Koding\Projek\Game\Rey01\public\models\npc\modular\arthur_morgan__rdr2_3d_character.glb"
+    input_file = r"d:\Koding\Projek\Game\Rey01\public\models\npc\modular\arthur_morgan_character.glb"
     output_dir = r"d:\Koding\Projek\Game\Rey01\public\models\npc\modular"
     master_armature = r"d:\Koding\Projek\Game\Rey01\public\models\npc\modular\armature\armature.glb"
     

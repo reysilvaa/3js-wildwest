@@ -4,60 +4,307 @@ export interface WeatherUIHandlers {
   onToggleTime: () => void;
   onToggleCondition: () => void;
   onToggleCycle: () => void;
+  onToggleMute?: () => boolean;
+  isMuted?: () => boolean;
+  onTriggerDialogue?: () => void;
+  onToggleCamera?: () => void;
 }
 
 export interface WeatherUI {
   update: (timeOfDay: TimeOfDay, condition: WeatherCondition, autoCycle: boolean) => void;
   container: HTMLDivElement;
+  setAudioMuted: (muted: boolean) => void;
+  toggleMenu: (open?: boolean) => void;
+}
+
+interface MenuItemDef {
+  id: string;
+  label: string;
+  shortcut: string;
+  getBadge: () => string;
+  getDesc: () => string;
+  action: () => void;
 }
 
 export function initWeatherUI(handlers: WeatherUIHandlers): WeatherUI {
-  const uiContainer = document.createElement("div");
-  uiContainer.id = "weather-controls";
-  uiContainer.className =
-    "absolute top-4 right-4 z-40 flex items-center gap-2 p-1.5 rounded-xl bg-[#140b07]/80 border-2 border-[#7d1214] shadow-frame backdrop-blur-md";
+  let currentTimeOfDay: TimeOfDay = "day";
+  let currentCondition: WeatherCondition = "clear";
+  let currentAutoCycle = false;
+  let isAudioMuted = handlers.isMuted ? handlers.isMuted() : false;
+  let isMenuOpen = false;
+  let selectedIdx = 0;
+  let isStreetCam = false;
 
-  function createBtn(id: string, label: string, title: string, onClick: () => void): HTMLButtonElement {
-    const btn = document.createElement("button");
-    btn.id = id;
-    btn.innerHTML = label;
-    btn.title = title;
-    btn.className = "rdr2-btn px-3.5 py-1.5 rounded-lg flex items-center justify-center gap-1.5";
+  const toggleBtn = document.createElement("button");
+  toggleBtn.id = "western-menu-toggle";
+  toggleBtn.className = "western-menu-toggle";
+  toggleBtn.innerHTML = '<span style="color:#cba043;font-weight:900">❖</span> SETTINGS <span style="opacity:0.6;font-size:10px">[L]</span>';
+  toggleBtn.title = "Toggle Settings Menu (Shortcut: L or Tab)";
+  document.body.appendChild(toggleBtn);
 
-    btn.addEventListener("click", onClick);
-    uiContainer.appendChild(btn);
-    return btn;
+  const menuContainer = document.createElement("div");
+  menuContainer.id = "western-settings-menu";
+  menuContainer.className = "western-side-menu collapsed";
+  menuContainer.setAttribute("role", "menu");
+  menuContainer.setAttribute("aria-label", "Frontier Town Settings Menu");
+
+  const headerSpacer = document.createElement("div");
+  headerSpacer.className = "western-menu-header-spacer";
+  headerSpacer.title = "Frontier Settings (Shortcut: L to collapse)";
+  menuContainer.appendChild(headerSpacer);
+
+  const listContainer = document.createElement("div");
+  listContainer.className = "western-menu-list";
+  menuContainer.appendChild(listContainer);
+
+  const footer = document.createElement("div");
+  footer.className = "western-menu-footer";
+  footer.innerHTML = `
+    <div class="western-menu-divider"></div>
+    <div id="western-menu-desc" class="western-menu-desc"></div>
+  `;
+  menuContainer.appendChild(footer);
+
+  document.body.appendChild(menuContainer);
+
+  const descEl = footer.querySelector("#western-menu-desc") as HTMLDivElement;
+
+  function toggleCamera() {
+    isStreetCam = !isStreetCam;
+    if (typeof (window as unknown as { __toggleCameraView?: () => void }).__toggleCameraView === "function") {
+      (window as unknown as { __toggleCameraView: () => void }).__toggleCameraView();
+    }
+    renderRows();
   }
 
-  const timeBtn = createBtn("btn-time", '<span style="color:#84181a;font-weight:900">★</span> DAY', "Toggle Day/Dusk/Night (Shortcut: N)", handlers.onToggleTime);
-  const weatherBtn = createBtn("btn-weather", '<span style="color:#84181a;font-weight:900">◈</span> FAIR', "Toggle Rain (Shortcut: R)", handlers.onToggleCondition);
-  const cycleBtn = createBtn("btn-cycle", '<span style="color:#84181a;font-weight:900">⏱</span> CYCLE: OFF', "Toggle Auto Cycle (Shortcut: C)", handlers.onToggleCycle);
+  function triggerTalk() {
+    if (typeof (window as unknown as { triggerConversation?: (a?: number, b?: number) => void }).triggerConversation === "function") {
+      (window as unknown as { triggerConversation: (a?: number, b?: number) => void }).triggerConversation(0, 1);
+    }
+    renderRows();
+  }
 
-  document.body.appendChild(uiContainer);
+  function inspectNextNPC() {
+    if (typeof (window as unknown as { inspectNPC?: (i?: number) => void }).inspectNPC === "function") {
+      (window as unknown as { inspectNPC: (i?: number) => void }).inspectNPC(0);
+    }
+    renderRows();
+  }
 
-  // Keyboard Shortcuts (N for Night/Day, R for Rain, C for Cycle)
-  window.addEventListener("keydown", (e) => {
-    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-    if (e.key.toLowerCase() === "n") handlers.onToggleTime();
-    if (e.key.toLowerCase() === "r") handlers.onToggleCondition();
-    if (e.key.toLowerCase() === "c") handlers.onToggleCycle();
-  });
+  function toggleWasdGuide() {
+    const el = document.getElementById("wasd-indicator");
+    if (el) {
+      const isVisible = el.classList.contains("opacity-100");
+      if (isVisible) {
+        el.classList.remove("opacity-100");
+        el.classList.add("opacity-0");
+      } else {
+        el.classList.remove("opacity-0");
+        el.classList.add("opacity-100");
+      }
+    }
+    renderRows();
+  }
 
-  function update(timeOfDay: TimeOfDay, condition: WeatherCondition, autoCycle: boolean): void {
-    const timeLabel = timeOfDay === "day" ? "DAY" : timeOfDay === "sunset" ? "DUSK" : "NIGHT";
-    const weatherLabel = condition === "clear" ? "FAIR" : "STORM";
-    const cycleLabel = autoCycle ? "CYCLE: 120S" : "CYCLE: OFF";
+  const menuItems: MenuItemDef[] = [
+    {
+      id: "time-of-day",
+      label: "Time of Day",
+      shortcut: "N",
+      getBadge: () => (currentTimeOfDay === "day" ? "DAY" : currentTimeOfDay === "sunset" ? "DUSK" : "NIGHT"),
+      getDesc: () => "Advance frontier sunlight between noon, golden sunset, and starry midnight. [Shortcut: N]",
+      action: () => handlers.onToggleTime(),
+    },
+    {
+      id: "weather",
+      label: "Weather",
+      shortcut: "R",
+      getBadge: () => (currentCondition === "rain" ? "STORM" : "FAIR"),
+      getDesc: () => "Summon desert rainfall, street mud accumulation, and distant thunderclaps. [Shortcut: R]",
+      action: () => handlers.onToggleCondition(),
+    },
+    {
+      id: "day-cycle",
+      label: "Day Cycle",
+      shortcut: "C",
+      getBadge: () => (currentAutoCycle ? "120S LOOP" : "OFF"),
+      getDesc: () => "Automate 120-second dynamic progression of lighting and celestial bodies. [Shortcut: C]",
+      action: () => handlers.onToggleCycle(),
+    },
+    {
+      id: "frontier-audio",
+      label: "Frontier Music",
+      shortcut: "M",
+      getBadge: () => (isAudioMuted ? "MUTED" : "ACTIVE"),
+      getDesc: () => "Toggle authentic western acoustic guitar, banjo, and environmental audio. [Shortcut: M]",
+      action: () => {
+        if (handlers.onToggleMute) {
+          isAudioMuted = handlers.onToggleMute();
+          renderRows();
+        }
+      },
+    },
+    {
+      id: "trigger-talk",
+      label: "Trigger Dialogue",
+      shortcut: "T",
+      getBadge: () => "CHAT",
+      getDesc: () => "Prompt nearby town residents to initiate spontaneous voice conversation. [Shortcut: T]",
+      action: triggerTalk,
+    },
+    {
+      id: "camera-view",
+      label: "Camera View",
+      shortcut: "V",
+      getBadge: () => (isStreetCam ? "STREET" : "ORBIT"),
+      getDesc: () => "Switch camera between free-orbit town overview and street-level exploration.",
+      action: toggleCamera,
+    },
+    {
+      id: "town-residents",
+      label: "Town Residents",
+      shortcut: "I",
+      getBadge: () => "5 CITIZENS",
+      getDesc: () => "Inspect autonomous townsfolk navigating the boardwalks, saloon, and depot.",
+      action: inspectNextNPC,
+    },
+    {
+      id: "controls-guide",
+      label: "Controls Guide",
+      shortcut: "H",
+      getBadge: () => "WASD + MOUSE",
+      getDesc: () => "WASD to walk · Mouse to look · [L] or [Tab] to toggle this Settings menu.",
+      action: toggleWasdGuide,
+    },
+  ];
 
-    timeBtn.innerHTML = `<span style="color:#84181a;font-weight:900">★</span> ${timeLabel}`;
-    weatherBtn.innerHTML = `<span style="color:#84181a;font-weight:900">◈</span> ${weatherLabel}`;
-    cycleBtn.innerHTML = `<span style="color:#84181a;font-weight:900">⏱</span> ${cycleLabel}`;
 
-    if (autoCycle) {
-      cycleBtn.classList.add("border-[#cba043]", "shadow-[0_0_12px_rgba(203,160,67,0.7)]");
-    } else {
-      cycleBtn.classList.remove("border-[#cba043]", "shadow-[0_0_12px_rgba(203,160,67,0.7)]");
+
+  function renderRows(): void {
+    listContainer.innerHTML = "";
+    menuItems.forEach((item, idx) => {
+      const row = document.createElement("div");
+      const isSelected = idx === selectedIdx;
+      row.className = `western-menu-row ${isSelected ? "selected" : ""}`;
+      row.setAttribute("role", "menuitem");
+      row.setAttribute("tabindex", "0");
+
+      row.innerHTML = `
+        <span class="flex items-center gap-2">
+          <span>${item.label}</span>
+        </span>
+        <span class="row-badge">${item.getBadge()}</span>
+      `;
+
+      row.addEventListener("mouseenter", () => {
+        selectedIdx = idx;
+        updateSelectedRowVisuals();
+      });
+
+      row.addEventListener("click", () => {
+        selectedIdx = idx;
+        item.action();
+        updateSelectedRowVisuals();
+      });
+
+      listContainer.appendChild(row);
+    });
+
+    updateDesc();
+  }
+
+  function updateSelectedRowVisuals(): void {
+    const rows = listContainer.querySelectorAll(".western-menu-row");
+    rows.forEach((r, i) => {
+      if (i === selectedIdx) {
+        r.classList.add("selected");
+      } else {
+        r.classList.remove("selected");
+      }
+    });
+    updateDesc();
+  }
+
+  function updateDesc(): void {
+    const item = menuItems[selectedIdx];
+    if (item && descEl) {
+      descEl.textContent = item.getDesc();
     }
   }
 
-  return { update, container: uiContainer };
+  function toggleMenu(open?: boolean): void {
+    isMenuOpen = open !== undefined ? open : !isMenuOpen;
+    if (isMenuOpen) {
+      menuContainer.classList.remove("collapsed");
+      toggleBtn.innerHTML = '<span style="color:#cba043;font-weight:900">❖</span> CLOSE <span style="opacity:0.6;font-size:10px">[L]</span>';
+    } else {
+      menuContainer.classList.add("collapsed");
+      toggleBtn.innerHTML = '<span style="color:#cba043;font-weight:900">❖</span> SETTINGS <span style="opacity:0.6;font-size:10px">[L]</span>';
+    }
+  }
+
+  headerSpacer.addEventListener("click", () => toggleMenu(false));
+  toggleBtn.addEventListener("click", () => toggleMenu());
+
+  window.addEventListener("keydown", (e) => {
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+    if (e.key.toLowerCase() === "l" || e.key === "Tab") {
+      e.preventDefault();
+      toggleMenu();
+      return;
+    }
+
+    if (!isMenuOpen) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      selectedIdx = (selectedIdx + 1) % menuItems.length;
+      updateSelectedRowVisuals();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      selectedIdx = (selectedIdx - 1 + menuItems.length) % menuItems.length;
+      updateSelectedRowVisuals();
+    } else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      const item = menuItems[selectedIdx];
+      item?.action();
+      updateSelectedRowVisuals();
+    } else if (e.key.toLowerCase() === "n") {
+      handlers.onToggleTime();
+    } else if (e.key.toLowerCase() === "r") {
+      handlers.onToggleCondition();
+    } else if (e.key.toLowerCase() === "c") {
+      handlers.onToggleCycle();
+    } else if (e.key.toLowerCase() === "t") {
+      triggerTalk();
+    }
+  });
+
+  (window as unknown as { __updateAudioUI?: (muted: boolean) => void }).__updateAudioUI = (muted: boolean) => {
+    isAudioMuted = muted;
+    renderRows();
+  };
+
+  renderRows();
+
+  function update(timeOfDay: TimeOfDay, condition: WeatherCondition, autoCycle: boolean): void {
+    currentTimeOfDay = timeOfDay;
+    currentCondition = condition;
+    currentAutoCycle = autoCycle;
+    renderRows();
+  }
+
+  function setAudioMuted(muted: boolean): void {
+    isAudioMuted = muted;
+    renderRows();
+  }
+
+  return {
+    update,
+    setAudioMuted,
+    toggleMenu,
+    container: menuContainer,
+  };
 }
+

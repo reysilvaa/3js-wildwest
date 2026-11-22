@@ -15,6 +15,8 @@ export interface WeatherOptions {
   onConditionChange?: (condition: WeatherCondition) => void;
   onThunder?: () => void;
   onIndoorLightChange?: (intensity: number) => void;
+  onToggleMute?: () => boolean;
+  isMuted?: () => boolean;
 }
 
 export interface WeatherSystem {
@@ -170,6 +172,8 @@ export function initWeather(
     onToggleTime: toggleTimeOfDay,
     onToggleCondition: toggleCondition,
     onToggleCycle: toggleAutoCycle,
+    onToggleMute: options.onToggleMute,
+    isMuted: options.isMuted,
   });
 
   function update(dt: number) {

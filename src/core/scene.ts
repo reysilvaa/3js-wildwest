@@ -21,7 +21,7 @@ export function initScene(options: SceneOptions = {}): SceneContext {
   const {
     fogColor = 0xd6a876,
     fogDensity = 0.01,
-    cameraPos = [10, 4.5, -20],
+    cameraPos = [10.0, 14.0, 28.0],
     sunPos = [30, 45, -20],
   } = options;
 
@@ -52,7 +52,7 @@ export function initScene(options: SceneOptions = {}): SceneContext {
   controls.maxPolarAngle = Math.PI / 2 - 0.02;
   controls.minDistance = 2;
   controls.maxDistance = 70;
-  controls.target.set(10, 1.5, 5);
+  controls.target.set(10.0, 1.5, -6.0);
 
   // Warm western hemisphere light: sky warm gold, ground warm desert sand bounce
   const hemiLight = new THREE.HemisphereLight(0xffeedd, 0xd4a578, 1.4);

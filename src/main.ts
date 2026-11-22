@@ -30,6 +30,8 @@ const weather = initWeather(scene, sunLight, hemiLight, {
   onConditionChange: (condition) => audio.setRain(condition === "rain"),
   onThunder: () => audio.playThunder(),
   onIndoorLightChange: (intensity) => world.setIndoorLighting(intensity),
+  onToggleMute: () => audio.toggleMute(),
+  isMuted: () => audio.isMuted(),
 });
 audio.setTimeOfDay(weather.getState().timeOfDay);
 
@@ -37,6 +39,18 @@ initAudioUI({
   onToggleMute: () => audio.toggleMute(),
   isMuted: () => audio.isMuted(),
 });
+
+let streetCameraActive = false;
+(window as unknown as Record<string, unknown>).__toggleCameraView = () => {
+  streetCameraActive = !streetCameraActive;
+  if (streetCameraActive) {
+    camera.position.set(10.0, 1.8, 5.0);
+    controls.target.set(10.0, 1.6, -10.0);
+  } else {
+    camera.position.set(10.0, 14.0, 28.0);
+    controls.target.set(10.0, 1.5, -6.0);
+  }
+};
 
 const NPC_SPAWN_SPOTS: [number, number, number][] = [
   [13.2, 0.45, -7.5], // Saloon Porch

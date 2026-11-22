@@ -487,10 +487,12 @@ export function initNPC(
         console.warn("Failed to load external walk animation:", err);
       }
 
-      // Only fade to Idle if a clip is available — Walk clip is used as the base animation.
-      // If animations Map is empty (walk load failed), skip to avoid stuck A-pose with no clip.
-      if (obj.animations.size > 0) {
-        fadeToAction("Walk", 0.1);
+      if (state === "WALK") {
+        fadeToAction("Walk", 0.2);
+      } else if (obj.animations.has("Idle")) {
+        fadeToAction("Idle", 0.25);
+      } else if (obj.animations.size > 0) {
+        fadeToAction(Array.from(obj.animations.keys())[0]!, 0.2);
       }
     })
     .catch((err: unknown) => console.warn("Failed to load NPC:", err));
