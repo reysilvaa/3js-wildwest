@@ -41,6 +41,58 @@ export interface NPCController {
   isPaused: () => boolean;
 }
 
+export const registeredNPCs: NPCController[] = [];
+
+/**
+ * High-performance mutual separation pass to prevent NPCs from ever overlapping or clipping.
+ */
+export function resolveNPCCollisions(npcs: NPCController[]): void {
+  const minDist = 0.86; // 2 * radius (body clearance ~0.86m)
+  const minDistSq = minDist * minDist;
+
+  for (let i = 0; i < npcs.length; i++) {
+    const a = npcs[i];
+    if (!a) continue;
+    const posA = a.getPosition();
+
+    for (let j = i + 1; j < npcs.length; j++) {
+      const b = npcs[j];
+      if (!b) continue;
+      const posB = b.getPosition();
+
+      const dx = posA.x - posB.x;
+      const dz = posA.z - posB.z;
+      const dSq = dx * dx + dz * dz;
+
+      if (dSq < minDistSq && dSq > 0.00001) {
+        const d = Math.sqrt(dSq);
+        const overlap = minDist - d;
+        const nx = dx / d;
+        const nz = dz / d;
+
+        const aPaused = a.isPaused();
+        const bPaused = b.isPaused();
+        const weightA = bPaused ? 0.0 : aPaused ? 1.0 : 0.5;
+        const weightB = 1.0 - weightA;
+
+        posA.x += nx * overlap * weightA;
+        posA.z += nz * overlap * weightA;
+        posB.x -= nx * overlap * weightB;
+        posB.z -= nz * overlap * weightB;
+
+        if (a.model) {
+          a.model.root.position.x = posA.x;
+          a.model.root.position.z = posA.z;
+        }
+        if (b.model) {
+          b.model.root.position.x = posB.x;
+          b.model.root.position.z = posB.z;
+        }
+      }
+    }
+  }
+}
+
 export function initNPC(
   scene: THREE.Scene,
   buildingBoxes: THREE.Box3[] = [],
@@ -163,6 +215,9 @@ export function initNPC(
   let stuckTimer = 0;
   const yAxis = new THREE.Vector3(0, 1, 0);
 
+  // Each NPC gets a persistent lateral lane preference across the street corridor (X: 7.6 to 12.4)
+  const laneBias = (Math.random() - 0.5) * 2.8;
+
   function planPathTo(destination: THREE.Vector3) {
     pathQueue.length = 0;
     if (streetNodes.length === 0) {
@@ -194,21 +249,36 @@ export function initNPC(
       }
     }
 
-    if (minStartDist > 1.2) {
-      // SAFETY: startNodeIdx is valid index
-      pathQueue.push(streetNodes[startNodeIdx]!.clone());
+    const pushRandomizedNode = (baseNode: THREE.Vector3) => {
+      // Dynamic random lateral variation constrained within street boundaries [7.6, 12.4]
+      const lateralJitter = (Math.random() - 0.5) * 1.2;
+      const targetX = Math.max(7.6, Math.min(12.4, baseNode.x + laneBias + lateralJitter));
+      const targetZ = baseNode.z + (Math.random() - 0.5) * 1.2;
+      const candidate = new THREE.Vector3(targetX, baseNode.y, targetZ);
+      if (!checkCollision(candidate, 0.46)) {
+        pathQueue.push(candidate);
+      } else {
+        pathQueue.push(baseNode.clone());
+      }
+    };
+
+    if (minStartDist > 1.4) {
+      pushRandomizedNode(streetNodes[startNodeIdx]!);
     }
 
     if (startNodeIdx !== endNodeIdx) {
       const step = startNodeIdx < endNodeIdx ? 1 : -1;
       for (let i = startNodeIdx + step; ; i += step) {
         // SAFETY: Loop bounded by endNodeIdx
-        pathQueue.push(streetNodes[i]!.clone());
+        pushRandomizedNode(streetNodes[i]!);
         if (i === endNodeIdx) break;
       }
     }
 
-    pathQueue.push(destination.clone());
+    // Destination waypoint with subtle organic jitter near destination spot
+    const destJitter = new THREE.Vector3((Math.random() - 0.5) * 0.7, 0, (Math.random() - 0.5) * 0.7);
+    const destCandidate = destination.clone().add(destJitter);
+    pathQueue.push(!checkCollision(destCandidate, 0.46) ? destCandidate : destination.clone());
   }
 
   function checkCollision(pos: THREE.Vector3, radius = 0.46): boolean {
@@ -221,6 +291,15 @@ export function initNPC(
     }
     for (const b of staticBoxes) {
       if (b.intersectsBox(npcBox)) return true;
+    }
+
+    // Solid collision check against other active NPCs
+    for (const other of registeredNPCs) {
+      if (other.id === npcId) continue;
+      const oPos = other.getPosition();
+      const dx = pos.x - oPos.x;
+      const dz = pos.z - oPos.z;
+      if (dx * dx + dz * dz < 0.76 * 0.76) return true;
     }
     return false;
   }
@@ -254,6 +333,22 @@ export function initNPC(
     };
     applyBoxes(buildingBoxes);
     applyBoxes(staticBoxes);
+
+    // Mutual NPC solid body separation
+    for (const other of registeredNPCs) {
+      if (other.id === npcId) continue;
+      const oPos = other.getPosition();
+      const dx = pos.x - oPos.x;
+      const dz = pos.z - oPos.z;
+      const dSq = dx * dx + dz * dz;
+      const minDist = 0.86;
+      if (dSq < minDist * minDist && dSq > 0.0001) {
+        const d = Math.sqrt(dSq);
+        const overlap = minDist - d;
+        pos.x += (dx / d) * overlap * 0.5;
+        pos.z += (dz / d) * overlap * 0.5;
+      }
+    }
   }
 
   function fadeToAction(name: string, duration = 0.3) {
@@ -285,10 +380,28 @@ export function initNPC(
   }
 
   function advanceToNextActivity() {
-    currentActivityIndex = (currentActivityIndex + 1) % activities.length;
-    // SAFETY: Clamped by modulo operation
-    const nextAct = activities[currentActivityIndex]!;
-    currentTarget.copy(nextAct.spot);
+    // Non-linear organic activity selection: choose random different destination
+    const candidateIndices: number[] = [];
+    for (let i = 0; i < activities.length; i++) {
+      if (i !== currentActivityIndex) candidateIndices.push(i);
+    }
+    const nextIdx = candidateIndices[Math.floor(Math.random() * candidateIndices.length)] ?? 0;
+    currentActivityIndex = nextIdx;
+
+    const baseAct = activities[currentActivityIndex]!;
+    // Subtle organic jitter around destination
+    const destJitter = new THREE.Vector3(
+      (Math.random() - 0.5) * 0.8,
+      0,
+      (Math.random() - 0.5) * 0.8
+    );
+    const candidateTarget = baseAct.spot.clone().add(destJitter);
+    if (!checkCollision(candidateTarget, 0.46)) {
+      currentTarget.copy(candidateTarget);
+    } else {
+      currentTarget.copy(baseAct.spot);
+    }
+
     planPathTo(currentTarget);
     stuckTimer = 0;
     state = "WALK";
@@ -506,14 +619,14 @@ export function initNPC(
       } else {
         dirVec.normalize();
 
-        // Lookahead collision avoidance: probe 0.95m in front
+        // Lookahead collision avoidance: probe 1.15m in front for walls & approaching NPCs
         let steerDir = dirVec.clone();
-        const lookaheadDist = 0.95;
+        const lookaheadDist = 1.15;
         const probeFront = currentPos.clone().add(steerDir.clone().multiplyScalar(lookaheadDist));
 
         if (checkCollision(probeFront, 0.46)) {
-          // Probe left & right whisker angles to steer clear of walls
-          const angles = [Math.PI / 4, -Math.PI / 4, Math.PI / 2, -Math.PI / 2];
+          // Probe left & right whisker angles to steer clear of walls & other NPCs
+          const angles = [Math.PI / 4, -Math.PI / 4, Math.PI / 2, -Math.PI / 2, (3 * Math.PI) / 4, (-3 * Math.PI) / 4];
           for (const angle of angles) {
             const candidate = dirVec.clone().applyAxisAngle(yAxis, angle);
             const probeCandidate = currentPos.clone().add(candidate.clone().multiplyScalar(lookaheadDist));
@@ -612,7 +725,7 @@ export function initNPC(
     return pauseTimer > 0;
   }
 
-  return {
+  const controller: NPCController = {
     id: npcId,
     name: npcName,
     get model() { return model; },
@@ -625,4 +738,6 @@ export function initNPC(
     pause,
     isPaused,
   };
+  registeredNPCs.push(controller);
+  return controller;
 }

@@ -7,7 +7,7 @@ import { initDesertGround } from "./environment/terrain/ground.js";
 import { loadWorld } from "./environment/world/town.js";
 import { initClouds } from "./environment/weather/clouds.js";
 import { initWeather } from "./environment/weather/weather.js";
-import { initNPC } from "./entities/npc/npc.js";
+import { initNPC, resolveNPCCollisions } from "./entities/npc/npc.js";
 import { inspectNPC } from "./entities/npc/modular.js";
 import { initBubbleChat } from "./ui/bubble-chat.js";
 import { initConversationManager } from "./entities/npc/conversation.js";
@@ -116,6 +116,7 @@ function animate() {
   for (let i = 0; i < npcs.length; i++) {
     npcs[i]?.update(dt);
   }
+  resolveNPCCollisions(npcs);
   conversations.update(dt);
   bubbleChat.update(camera, dt);
   tumbleweeds.update(dt, buildingBoxes);

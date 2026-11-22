@@ -86,6 +86,61 @@
       ],
       "facingAngle": 1.5708,
       "duration": 12.0
+    },
+    {
+      "name": "Saloon Hitching Post",
+      "description": "Inspecting horses by the hitching post near the saloon",
+      "spot": [
+        11.5,
+        0.45,
+        -3.5
+      ],
+      "facingAngle": -1.5708,
+      "duration": 8.0
+    },
+    {
+      "name": "Hotel Boardwalk",
+      "description": "Strolling the covered walkway outside the frontier hotel",
+      "spot": [
+        6.8,
+        0.45,
+        -6.5
+      ],
+      "facingAngle": 1.5708,
+      "duration": 9.0
+    },
+    {
+      "name": "Water Tower Crossing",
+      "description": "Pausing near the street crossing toward the water tower",
+      "spot": [
+        8.8,
+        0.45,
+        17.5
+      ],
+      "facingAngle": 3.1415,
+      "duration": 7.0
+    },
+    {
+      "name": "Depot Freight Dock",
+      "description": "Resting against the wooden cargo crates by the depot",
+      "spot": [
+        7.0,
+        0.45,
+        -22.5
+      ],
+      "facingAngle": 0.0,
+      "duration": 10.0
+    },
+    {
+      "name": "Main Street Crossing",
+      "description": "Standing on the wide dusty avenue between bank and sheriff",
+      "spot": [
+        10.0,
+        0.45,
+        -1.0
+      ],
+      "facingAngle": 1.2,
+      "duration": 6.5
     }
   ],
   "staticBoxes": [
