@@ -28,11 +28,17 @@ export interface NPCOptions {
 }
 
 export interface NPCController {
+  id: string;
+  name: string;
   model: ModelObject | null;
   update: (dt: number) => void;
   getState: () => "IDLE" | "WALK" | "GREET" | "ACTIVITY";
   getCurrentActivity: () => string;
+  getPosition: () => THREE.Vector3;
   teleport: (x: number, y: number, z: number) => void;
+  faceTarget: (targetPos: THREE.Vector3, duration?: number) => void;
+  pause: (duration: number) => void;
+  isPaused: () => boolean;
 }
 
 export function initNPC(
@@ -57,6 +63,12 @@ export function initNPC(
     stationary = false,
     facingAngle = 0,
   } = options;
+
+  const npcName = options.name ?? "Resident";
+  const npcId = `npc_${Math.random().toString(36).slice(2, 9)}`;
+  let pauseTimer = 0;
+  let forcedFaceTarget: THREE.Vector3 | null = null;
+  let faceTimer = 0;
 
   let model: ModelObject | null = null;
   let state: "IDLE" | "WALK" | "GREET" | "ACTIVITY" = "ACTIVITY";
@@ -383,6 +395,27 @@ export function initNPC(
     if (!model) return;
     model.update(dt);
 
+    if (pauseTimer > 0) {
+      pauseTimer -= dt;
+      if (faceTimer > 0 && forcedFaceTarget) {
+        faceTimer -= dt;
+        dirVec.copy(forcedFaceTarget).sub(currentPos);
+        dirVec.y = 0;
+        if (dirVec.lengthSq() > 0.01) {
+          dirVec.normalize();
+          const targetAngle = Math.atan2(dirVec.x, dirVec.z);
+          targetRotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), targetAngle);
+          model.root.quaternion.slerp(targetRotation, Math.min(1, 6 * dt));
+        }
+      }
+      fadeToAction("Idle", 0.25);
+      const centerElev = getGroundElevation(currentPos.x, currentPos.z);
+      currentPos.y = centerElev.height;
+      resolvePenetration(currentPos, 0.46);
+      model.root.position.copy(currentPos);
+      return;
+    }
+
     // -------------------------------------------------------------
     // 1. Social Player Awareness & State Transitions
     // -------------------------------------------------------------
@@ -562,11 +595,34 @@ export function initNPC(
     return activities[currentActivityIndex]!.name;
   }
 
+  function getPosition() {
+    return currentPos;
+  }
+
+  function faceTarget(targetPos: THREE.Vector3, duration = 6.0) {
+    forcedFaceTarget = targetPos.clone();
+    faceTimer = duration;
+  }
+
+  function pause(duration: number) {
+    pauseTimer = Math.max(pauseTimer, duration);
+  }
+
+  function isPaused() {
+    return pauseTimer > 0;
+  }
+
   return {
+    id: npcId,
+    name: npcName,
     get model() { return model; },
     update,
     getState,
     getCurrentActivity,
+    getPosition,
     teleport,
+    faceTarget,
+    pause,
+    isPaused,
   };
 }

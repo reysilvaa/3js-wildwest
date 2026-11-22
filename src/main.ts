@@ -9,6 +9,8 @@ import { initClouds } from "./environment/weather/clouds.js";
 import { initWeather } from "./environment/weather/weather.js";
 import { initNPC } from "./entities/npc/npc.js";
 import { inspectNPC } from "./entities/npc/modular.js";
+import { initBubbleChat } from "./ui/bubble-chat.js";
+import { initConversationManager } from "./entities/npc/conversation.js";
 import { initTumbleweeds } from "./entities/tumbleweed.js";
 
 // 1. Scene, Camera, Renderer, Controls & Lighting
@@ -53,7 +55,7 @@ const NPC_SPAWN_SPOTS: [number, number, number][] = [
   [6.8, 0.45, -16.0], // Train Depot
 ];
 
-const NPC_NAMES = ["Arthur", "Wyatt", "Doc", "Jesse", "Sadie"];
+const NPC_NAMES = ["Arthur", "Wyatt", "Doc", "Jack Owi", "Sadie"];
 
 const npcs = NPC_SPAWN_SPOTS.map((pos, i) =>
   initNPC(scene, buildingBoxes, camera, {
@@ -69,8 +71,21 @@ const npcs = NPC_SPAWN_SPOTS.map((pos, i) =>
   })
 );
 
+// 8. Inter-NPC Speech Bubble & Autonomous AI Dialogue System
+const bubbleChat = initBubbleChat();
+const conversations = initConversationManager(npcs, bubbleChat);
+
 // Diagnostic quick-inspection hook on window
 (window as unknown as Record<string, unknown>).__npcs = npcs;
+(window as unknown as Record<string, unknown>).triggerConversation = (i = 0, j = 1) => {
+  const a = npcs[i];
+  const b = npcs[j];
+  if (a && b) conversations.triggerPairConversation(a, b);
+};
+(window as unknown as Record<string, unknown>).sayBubble = (i = 0, text = "Howdy partner!") => {
+  const npc = npcs[i];
+  if (npc) bubbleChat.showBubble(npc.id, npc.name, text, () => npc.getPosition());
+};
 (window as unknown as Record<string, unknown>).inspectNPC = (index = 0) => {
   const npc = npcs[index];
   if (!npc || !npc.model) {
@@ -81,7 +96,7 @@ const npcs = NPC_SPAWN_SPOTS.map((pos, i) =>
   return inspectNPC(npc.model);
 };
 
-// 8. Clean Declarative Game Loop
+// 9. Clean Declarative Game Loop
 const clock = new THREE.Clock();
 
 function animate() {
@@ -96,6 +111,8 @@ function animate() {
   for (let i = 0; i < npcs.length; i++) {
     npcs[i]?.update(dt);
   }
+  conversations.update(dt);
+  bubbleChat.update(camera);
   tumbleweeds.update(dt, buildingBoxes);
   clouds.update(dt, weather.getState());
   controls.update();
