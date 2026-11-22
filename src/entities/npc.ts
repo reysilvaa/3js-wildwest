@@ -65,7 +65,7 @@ export function initNPC(
     {
       name: "Saloon Porch",
       description: "Resting on the wooden boardwalk outside the Saloon",
-      spot: new THREE.Vector3(18.5, 0.45, -7.5),
+      spot: new THREE.Vector3(13.2, 0.45, -7.5),
       facingAngle: -Math.PI / 2,
       duration: 8.0,
     },
@@ -100,6 +100,7 @@ export function initNPC(
         }
         if (currentTarget) {
           currentTarget.copy(activities[0]!.spot);
+          planPathTo(currentTarget);
         }
       }
       if (data.staticBoxes && data.staticBoxes.length > 0) {
@@ -118,8 +119,60 @@ export function initNPC(
   const dirVec = new THREE.Vector3();
   // SAFETY: activities array is non-empty constant defined above
   const currentTarget = activities[0]!.spot.clone();
+  const pathQueue: THREE.Vector3[] = [];
+  const lastPos = currentPos.clone();
+  let stuckTimer = 0;
+  const yAxis = new THREE.Vector3(0, 1, 0);
 
-  function checkCollision(pos: THREE.Vector3, radius = 0.45): boolean {
+  function planPathTo(destination: THREE.Vector3) {
+    pathQueue.length = 0;
+    if (streetNodes.length === 0) {
+      pathQueue.push(destination.clone());
+      return;
+    }
+
+    let startNodeIdx = 0;
+    let minStartDist = Infinity;
+    for (let i = 0; i < streetNodes.length; i++) {
+      // SAFETY: Index is within streetNodes length
+      const node = streetNodes[i]!;
+      const d = currentPos.distanceTo(node);
+      if (d < minStartDist) {
+        minStartDist = d;
+        startNodeIdx = i;
+      }
+    }
+
+    let endNodeIdx = 0;
+    let minEndDist = Infinity;
+    for (let i = 0; i < streetNodes.length; i++) {
+      // SAFETY: Index is within streetNodes length
+      const node = streetNodes[i]!;
+      const d = destination.distanceTo(node);
+      if (d < minEndDist) {
+        minEndDist = d;
+        endNodeIdx = i;
+      }
+    }
+
+    if (minStartDist > 1.2) {
+      // SAFETY: startNodeIdx is valid index
+      pathQueue.push(streetNodes[startNodeIdx]!.clone());
+    }
+
+    if (startNodeIdx !== endNodeIdx) {
+      const step = startNodeIdx < endNodeIdx ? 1 : -1;
+      for (let i = startNodeIdx + step; ; i += step) {
+        // SAFETY: Loop bounded by endNodeIdx
+        pathQueue.push(streetNodes[i]!.clone());
+        if (i === endNodeIdx) break;
+      }
+    }
+
+    pathQueue.push(destination.clone());
+  }
+
+  function checkCollision(pos: THREE.Vector3, radius = 0.55): boolean {
     const min = new THREE.Vector3(pos.x - radius, pos.y + 0.1, pos.z - radius);
     const max = new THREE.Vector3(pos.x + radius, pos.y + 1.8, pos.z + radius);
     const npcBox = new THREE.Box3(min, max);
@@ -133,32 +186,35 @@ export function initNPC(
     return false;
   }
 
-  function resolvePenetration(pos: THREE.Vector3, radius = 0.45): void {
-    const allBoxes = buildingBoxes.length > 0 ? buildingBoxes : staticBoxes;
-    for (const box of allBoxes) {
-      if (
-        pos.x + radius > box.min.x &&
-        pos.x - radius < box.max.x &&
-        pos.z + radius > box.min.z &&
-        pos.z - radius < box.max.z
-      ) {
-        const overlapX1 = pos.x + radius - box.min.x;
-        const overlapX2 = box.max.x - (pos.x - radius);
-        const overlapZ1 = pos.z + radius - box.min.z;
-        const overlapZ2 = box.max.z - (pos.z - radius);
+  function resolvePenetration(pos: THREE.Vector3, radius = 0.55): void {
+    const applyBoxes = (boxes: THREE.Box3[]) => {
+      for (const box of boxes) {
+        if (
+          pos.x + radius > box.min.x &&
+          pos.x - radius < box.max.x &&
+          pos.z + radius > box.min.z &&
+          pos.z - radius < box.max.z
+        ) {
+          const overlapX1 = pos.x + radius - box.min.x;
+          const overlapX2 = box.max.x - (pos.x - radius);
+          const overlapZ1 = pos.z + radius - box.min.z;
+          const overlapZ2 = box.max.z - (pos.z - radius);
 
-        const minX = Math.min(overlapX1, overlapX2);
-        const minZ = Math.min(overlapZ1, overlapZ2);
+          const minX = Math.min(overlapX1, overlapX2);
+          const minZ = Math.min(overlapZ1, overlapZ2);
 
-        if (minX < minZ) {
-          if (overlapX1 < overlapX2) pos.x = box.min.x - radius - 0.05;
-          else pos.x = box.max.x + radius + 0.05;
-        } else {
-          if (overlapZ1 < overlapZ2) pos.z = box.min.z - radius - 0.05;
-          else pos.z = box.max.z + radius + 0.05;
+          if (minX < minZ) {
+            if (overlapX1 < overlapX2) pos.x = box.min.x - radius - 0.08;
+            else pos.x = box.max.x + radius + 0.08;
+          } else {
+            if (overlapZ1 < overlapZ2) pos.z = box.min.z - radius - 0.08;
+            else pos.z = box.max.z + radius + 0.08;
+          }
         }
       }
-    }
+    };
+    applyBoxes(buildingBoxes);
+    applyBoxes(staticBoxes);
   }
 
   function fadeToAction(name: string, duration = 0.3) {
@@ -194,6 +250,8 @@ export function initNPC(
     // SAFETY: Clamped by modulo operation
     const nextAct = activities[currentActivityIndex]!;
     currentTarget.copy(nextAct.spot);
+    planPathTo(currentTarget);
+    stuckTimer = 0;
     state = "WALK";
     fadeToAction("Walk", 0.35);
   }
@@ -292,55 +350,92 @@ export function initNPC(
         advanceToNextActivity();
       }
     } else if (state === "WALK") {
-      if (currentActionName !== "Walk") {
-        fadeToAction("Walk", 0.3);
-      }
-      dirVec.copy(currentTarget).sub(currentPos);
+      // SAFETY: Array fallback ensures non-empty target
+      const activeWaypoint = pathQueue.length > 0 ? pathQueue[0]! : currentTarget;
+      dirVec.copy(activeWaypoint).sub(currentPos);
       dirVec.y = 0;
       const dist = dirVec.length();
 
-      if (dist < 0.9) {
-        // Arrived at activity spot!
-        state = "ACTIVITY";
-        fadeToAction("Idle", 0.35);
-        // SAFETY: Clamped by modulo operation
-        const curAct = activities[currentActivityIndex]!;
-        stateTimer = curAct.duration;
+      const isFinalDestination = pathQueue.length <= 1;
+      const arrivalThreshold = isFinalDestination ? 0.9 : 0.8;
+
+      if (dist < arrivalThreshold) {
+        if (pathQueue.length > 0) {
+          pathQueue.shift();
+        }
+        if (pathQueue.length === 0) {
+          // Arrived at activity spot!
+          state = "ACTIVITY";
+          fadeToAction("Idle", 0.35);
+          stuckTimer = 0;
+          // SAFETY: Clamped by modulo operation
+          const curAct = activities[currentActivityIndex]!;
+          stateTimer = curAct.duration;
+        }
       } else {
         dirVec.normalize();
 
-        const moveAngle = Math.atan2(dirVec.x, dirVec.z);
-        targetRotation.setFromAxisAngle(new THREE.Vector3(0, 1, 0), moveAngle);
+        // Lookahead collision avoidance: probe 1.1m in front
+        let steerDir = dirVec.clone();
+        const lookaheadDist = 1.1;
+        const probeFront = currentPos.clone().add(steerDir.clone().multiplyScalar(lookaheadDist));
+
+        if (checkCollision(probeFront, 0.55)) {
+          // Probe left & right whisker angles to steer clear of walls
+          const angles = [Math.PI / 4, -Math.PI / 4, Math.PI / 2, -Math.PI / 2];
+          for (const angle of angles) {
+            const candidate = dirVec.clone().applyAxisAngle(yAxis, angle);
+            const probeCandidate = currentPos.clone().add(candidate.clone().multiplyScalar(lookaheadDist));
+            if (!checkCollision(probeCandidate, 0.55)) {
+              steerDir = candidate;
+              break;
+            }
+          }
+        }
+
+        const moveAngle = Math.atan2(steerDir.x, steerDir.z);
+        targetRotation.setFromAxisAngle(yAxis, moveAngle);
         model.root.quaternion.slerp(targetRotation, Math.min(1, 6 * dt));
 
-        // Building collision detection with wall sliding
+        // Advance position with wall sliding fallback
         const stepDist = walkSpeed * dt;
-        const step = dirVec.clone().multiplyScalar(stepDist);
+        const step = steerDir.clone().multiplyScalar(stepDist);
         const nextPos = currentPos.clone().add(step);
 
-        if (!checkCollision(nextPos, 0.45)) {
+        if (!checkCollision(nextPos, 0.55)) {
           currentPos.copy(nextPos);
         } else {
           const nextX = currentPos.clone().add(new THREE.Vector3(step.x, 0, 0));
           const nextZ = currentPos.clone().add(new THREE.Vector3(0, 0, step.z));
-
-          if (!checkCollision(nextX, 0.45)) {
+          if (!checkCollision(nextX, 0.55)) {
             currentPos.copy(nextX);
-          } else if (!checkCollision(nextZ, 0.45)) {
+          } else if (!checkCollision(nextZ, 0.55)) {
             currentPos.copy(nextZ);
-          } else {
-            // Detour via closest street node
-            // SAFETY: Default fallback ensures index 0 always defined
-            let closestNode = streetNodes[0]!;
-            let minDist = Infinity;
-            for (const node of streetNodes) {
-              const d = node.distanceTo(currentPos);
-              if (d > 1.0 && d < minDist) {
-                minDist = d;
-                closestNode = node;
-              }
+          }
+        }
+
+        // Stuck detection & animation state synchronization
+        const movedDist = currentPos.distanceTo(lastPos);
+        lastPos.copy(currentPos);
+
+        if (movedDist < 0.003) {
+          stuckTimer += dt;
+          if (stuckTimer > 0.25) {
+            fadeToAction("Idle", 0.2);
+          }
+          if (stuckTimer > 0.8) {
+            // Unstick: pop blocked intermediate node or replan
+            if (pathQueue.length > 1) {
+              pathQueue.shift();
+            } else {
+              planPathTo(currentTarget);
             }
-            currentTarget.copy(closestNode);
+            stuckTimer = 0;
+          }
+        } else {
+          stuckTimer = 0;
+          if (currentActionName !== "Walk") {
+            fadeToAction("Walk", 0.2);
           }
         }
       }
@@ -351,7 +446,7 @@ export function initNPC(
     // -------------------------------------------------------------
     const centerElev = getGroundElevation(currentPos.x, currentPos.z);
     currentPos.y = centerElev.height;
-    resolvePenetration(currentPos, 0.45);
+    resolvePenetration(currentPos, 0.55);
     model.root.position.copy(currentPos);
   }
 

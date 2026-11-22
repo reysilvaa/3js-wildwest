@@ -9,6 +9,8 @@ export interface WeatherOptions {
   initialCondition?: WeatherCondition;
   autoCycle?: boolean;
   onTimeChange?: (time: TimeOfDay) => void;
+  onConditionChange?: (condition: WeatherCondition) => void;
+  onThunder?: () => void;
   onIndoorLightChange?: (intensity: number) => void;
 }
 
@@ -155,6 +157,7 @@ export function initWeather(
   function setCondition(c: WeatherCondition) {
     condition = c;
     updateUI();
+    options.onConditionChange?.(condition);
   }
 
   function toggleTimeOfDay() {
@@ -166,6 +169,7 @@ export function initWeather(
   function toggleCondition() {
     condition = condition === "clear" ? "rain" : "clear";
     updateUI();
+    options.onConditionChange?.(condition);
   }
 
   function toggleAutoCycle() {
@@ -336,6 +340,7 @@ export function initWeather(
       if (lightningTimer <= 0) {
         lightningFlash = 0.12;
         lightningTimer = 6 + Math.random() * 10;
+        options.onThunder?.();
       }
 
       if (lightningFlash > 0) {

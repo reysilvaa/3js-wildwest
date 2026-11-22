@@ -24,12 +24,14 @@ const world = loadWorld(scene, controls, camera, renderer, buildingBoxes);
 const clouds = initClouds(scene);
 const tumbleweeds = initTumbleweeds(scene);
 
-// Initialize Audio System (Day BGM: /bgm/day.ogg)
+// Initialize Audio System (Day BGM: /bgm/day.ogg, Rain: /bgm/weather/rain.ogg, Thunder: /bgm/weather/thunder.ogg)
 const audio = initAudio();
 
-// Initialize Dynamic Weather System (Day/Night cycle, Rain particles, Lightning, BGM synchronization, Indoor lighting)
+// Initialize Dynamic Weather System (Day/Night cycle, Rain particles, Lightning, Audio synchronization, Indoor lighting)
 const weather = initWeather(scene, sunLight, hemiLight, flare, {
   onTimeChange: (time) => audio.setDayTime(time === "day"),
+  onConditionChange: (condition) => audio.setRain(condition === "rain"),
+  onThunder: () => audio.playThunder(),
   onIndoorLightChange: (intensity) => world.setIndoorLighting(intensity),
 });
 

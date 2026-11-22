@@ -24,6 +24,11 @@
       10.0,
       0,
       9.5
+    ],
+    [
+      9.5,
+      0,
+      16.0
     ]
   ],
   "activities": [
@@ -31,7 +36,7 @@
       "name": "Saloon Porch",
       "description": "Resting on the wooden boardwalk outside the Saloon",
       "spot": [
-        18.5,
+        13.2,
         0.45,
         -7.5
       ],
@@ -42,9 +47,9 @@
       "name": "Bank Steps",
       "description": "Surveying the main street from the bank boardwalk",
       "spot": [
-        -3.5,
+        6.8,
         0.45,
-        4.0
+        7.0
       ],
       "facingAngle": 1.5708,
       "duration": 10.0
@@ -53,9 +58,9 @@
       "name": "Sheriff Office",
       "description": "Checking notice boards near the sheriff station",
       "spot": [
-        17.0,
+        13.0,
         0.45,
-        1.5
+        0.5
       ],
       "facingAngle": -1.5708,
       "duration": 7.0
@@ -64,9 +69,9 @@
       "name": "General Store",
       "description": "Browsing goods on the porch of the general store",
       "spot": [
-        17.0,
+        13.0,
         0.45,
-        11.5
+        12.0
       ],
       "facingAngle": -1.5708,
       "duration": 9.0
@@ -75,9 +80,9 @@
       "name": "Train Depot",
       "description": "Watching the tracks at the railway depot platform",
       "spot": [
-        -3.5,
+        6.8,
         0.45,
-        -15.0
+        -16.0
       ],
       "facingAngle": 1.5708,
       "duration": 12.0
