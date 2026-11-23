@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { loadAsset, AssetKey } from "../assets.js";
 import { getGroundHeightOnly } from "../terrain/height.js";
+import { CollisionWorld } from "../../core/collision.js";
 
 export interface TownInstance {
   asset: AssetKey;
@@ -27,7 +28,7 @@ const BUILDING_ASSETS = new Set([
 ]);
 const SOLID_OBSTACLE_ASSETS = new Set([
   ...BUILDING_ASSETS,
-  "cart", "well", "fence", "crates", "bench", "hitching_post", "telegraph_pole",
+  "cart", "well", "fence", "crates", "bench", "hitching_post",
 ]);
 
 export function loadWorld(
@@ -139,12 +140,20 @@ export function loadWorld(
           }
 
           const isBuilding = BUILDING_ASSETS.has(inst.asset);
-          const isObstacle = SOLID_OBSTACLE_ASSETS.has(inst.asset) && !isBuilding;
+          const isSolid = SOLID_OBSTACLE_ASSETS.has(inst.asset);
 
-          if (isObstacle) {
+          if (isSolid) {
             const wholeBox = new THREE.Box3().setFromObject(model);
             if (wholeBox.max.y - wholeBox.min.y > 0.25) {
+              if (isBuilding) {
+                // Keep outer boardwalk walkable while solid building walls block NPCs
+                wholeBox.min.x += 0.4;
+                wholeBox.max.x -= 0.4;
+                wholeBox.min.z += 0.4;
+                wholeBox.max.z -= 0.4;
+              }
               buildingBoxes.push(wholeBox);
+              CollisionWorld.getInstance().addBox(wholeBox);
             }
           }
 

@@ -155,6 +155,7 @@ export class NPC implements NPCController {
 
   private state: NPCState = "ACTIVITY";
   private stateTimer = 0.6 + Math.random() * 4.5;
+  private stuckTimer = 0;
   private pauseTimer = 0;
   private faceTimer = 0;
   private forcedFaceTarget: THREE.Vector3 | null = null;
@@ -400,10 +401,13 @@ export class NPC implements NPCController {
 
         if (!this.collisionWorld.checkPointCollision(this._tmpNext, 0.46)) {
           this.currentPos.copy(this._tmpNext);
+          this.stuckTimer = 0;
           this.fadeToAction("Walk", 0.2);
         } else {
+          this.stuckTimer += dt;
           this.fadeToAction("Idle", 0.2);
-          if (steering.isBlocked) {
+          if (steering.isBlocked || this.stuckTimer > 1.5) {
+            this.stuckTimer = 0;
             this.advanceToNextActivity();
           }
         }
