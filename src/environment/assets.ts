@@ -31,9 +31,12 @@ export const ASSET_MAP = {
   anim_idle: "/models/movement/idle.glb",
   anim_walk: "/models/movement/walk.glb",
 
-  npc_arthur: "/models/npc/arthur.glb",
-  npc_acc_arthur_hat: "/models/npc/modular/accessories/arthur_hat.glb",
-  npc_acc_arthur_holster: "/models/npc/modular/accessories/arthur_holster.glb",
+  npc_001: "/models/npc/characters/npc_001.glb",
+  npc_002: "/models/npc/characters/npc_002.glb",
+  npc_003: "/models/npc/characters/npc_003.glb",
+  hat_001: "/models/npc/modular/accessories/hat/hat_001.glb",
+  holster_001: "/models/npc/modular/accessories/holster/holster_001.glb",
+  holster_002: "/models/npc/modular/accessories/holster/holster_002.glb",
 } as const;
 
 export type AssetKey = keyof typeof ASSET_MAP;

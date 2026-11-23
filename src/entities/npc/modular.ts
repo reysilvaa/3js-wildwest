@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { GLTFLoader, type GLTF } from "three/addons/loaders/GLTFLoader.js";
 import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
 import type { ModelObject } from "../../core/models.js";
 
@@ -8,38 +8,120 @@ export interface ModularPartsConfig {
   accessoryUrl?: string;
   holsterUrl?: string;
   outfitColor?: number | THREE.Color;
+  pantsColor?: number | THREE.Color;
+  bootsColor?: number | THREE.Color;
+  hatColor?: number | THREE.Color;
+  holsterColor?: number | THREE.Color;
 }
 
 export const WESTERN_OUTFIT_PALETTE = [
-  0x1f1f1f, // Charcoal Black (Undertaker / Gentleman)
-  0x784a22, // Saddle Brown Leather (Rancher)
-  0xb89562, // Dusty Tan / Buckskin (Frontier Scout)
-  0x22354c, // Deep Navy Blue (Town Marshal / Banker)
-  0x5c1d24, // Wine / Burgundy (Saloon Gambler)
-  0x384732, // Forest Olive (Mountain Scout)
-  0x7a6b5c, // Weathered Dust Brown (Frontier Drifter)
+  0x6b4423, // Rawhide Saddle Brown
+  0xa68966, // Dusty Buckskin Tan
+  0x262422, // Worn Undertaker Charcoal
+  0x2f3e4e, // Faded Frontier Denim
+  0x5c2422, // Aged Saloon Burgundy
+  0x454e38, // Weathered Sage Olive
+  0x7c3a25, // Sun-baked Frontier Rust
+  0xb59e7d, // Sun-bleached Canvas Khaki
+  0x4c4640, // Dusty Frontier Tweed
+  0x4e2a1e, // Aged Mahogany Leather
 ];
 
-const MODULAR_HATS = [
-  "/models/npc/modular/accessories/arthur_hat.glb",
+export const WESTERN_PANTS_PALETTE = [
+  0x262422, // Worn Charcoal Canvas
+  0x2c3642, // Faded Indigo Denim
+  0x4a392c, // Weathered Trail Brown
+  0x6e5d49, // Dusty Frontier Khaki
+  0x3b3d32, // Muted Sage Canvas
+  0x362a24, // Raw Umber Wool
 ];
 
-const MODULAR_HOLSTERS = [
-  "/models/npc/modular/accessories/arthur_holster.glb",
+export const WESTERN_LEATHER_PALETTE = [
+  0x5a3b22, // Saddle Brown Leather
+  0x2b221c, // Dark Espresso Leather
+  0x7a5634, // Rawhide Tan Leather
+  0x22201e, // Worn Black Leather
+  0x6e3d24, // Burnt Chestnut Leather
+  0x4d2d1d, // Aged Mahogany Leather
 ];
+
+export const WESTERN_HAT_PALETTE = [
+  0x5a3b22, // Weathered Saddle Leather
+  0x2b241f, // Dark Espresso Felt
+  0x8a6d4b, // Dusty Frontier Tan
+  0x3b3734, // Worn Charcoal Felt
+  0x6e472b, // Sun-baked Chestnut
+  0x9e8869, // Sun-bleached Straw/Suede
+];
+
+const pickRandom = <T>(arr: readonly T[]): T => arr[Math.floor(Math.random() * arr.length)]!;
+
+export const NPC_ASSET_COUNTS = {
+  characters: 3,
+  hats: 1,
+  holsters: 2,
+} as const;
+
+const pad3 = (n: number) => String(n).padStart(3, "0");
+
+export const NPC_MODELS: readonly string[] = Array.from(
+  { length: NPC_ASSET_COUNTS.characters },
+  (_, i) => `/models/npc/characters/npc_${pad3(i + 1)}.glb`
+);
+
+export const MODULAR_HATS: readonly string[] = Array.from(
+  { length: NPC_ASSET_COUNTS.hats },
+  (_, i) => `/models/npc/modular/accessories/hat/hat_${pad3(i + 1)}.glb`
+);
+
+export const MODULAR_HOLSTERS: readonly string[] = Array.from(
+  { length: NPC_ASSET_COUNTS.holsters },
+  (_, i) => `/models/npc/modular/accessories/holster/holster_${pad3(i + 1)}.glb`
+);
+
+export function getNPCModelByIndex(index: number): string {
+  return NPC_MODELS[Math.abs(index) % NPC_MODELS.length]!;
+}
+
+export function getRandomHatUrl(): string {
+  return MODULAR_HATS[Math.floor(Math.random() * MODULAR_HATS.length)]!;
+}
+
+const gltfCache = new Map<string, Promise<GLTF>>();
+
+function loadCachedGLTF(url: string, loader: GLTFLoader): Promise<GLTF> {
+  let promise = gltfCache.get(url);
+  if (!promise) {
+    promise = loader.loadAsync(url).catch((err) => {
+      gltfCache.delete(url);
+      throw err;
+    });
+    gltfCache.set(url, promise);
+  }
+  return promise;
+}
 
 export function getRandomModularConfig(): Required<ModularPartsConfig> {
-  const outfitColor = WESTERN_OUTFIT_PALETTE[Math.floor(Math.random() * WESTERN_OUTFIT_PALETTE.length)]!;
-  const wearsHat = Math.random() < 0.65;
-  const accessoryUrl = wearsHat ? MODULAR_HATS[0]! : "";
+  const modelUrl = pickRandom(NPC_MODELS);
+  const outfitColor = pickRandom(WESTERN_OUTFIT_PALETTE);
+  const pantsColor = pickRandom(WESTERN_PANTS_PALETTE);
+  const bootsColor = pickRandom(WESTERN_LEATHER_PALETTE);
+  const hatColor = pickRandom(WESTERN_HAT_PALETTE);
+  const holsterColor = pickRandom(WESTERN_LEATHER_PALETTE);
+  const wearsHat = Math.random() < 0.70;
+  const accessoryUrl = wearsHat ? getRandomHatUrl() : "";
   const wearsHolster = Math.random() < 0.80;
-  const holsterUrl = wearsHolster ? MODULAR_HOLSTERS[0]! : "";
+  const holsterUrl = wearsHolster ? pickRandom(MODULAR_HOLSTERS) : "";
 
   return {
-    modelUrl: "/models/npc/arthur.glb",
+    modelUrl,
     accessoryUrl,
     holsterUrl,
     outfitColor,
+    pantsColor,
+    bootsColor,
+    hatColor,
+    holsterColor,
   };
 }
 
@@ -60,9 +142,9 @@ export async function assembleModularCharacter(
   parentScene?: THREE.Object3D,
   loader = new GLTFLoader()
 ): Promise<ModelObject> {
-  const modelUrl = config.modelUrl || "/models/npc/arthur.glb";
+  const modelUrl = config.modelUrl || NPC_MODELS[0]!;
 
-  const baseGltf = await loader.loadAsync(modelUrl);
+  const baseGltf = await loadCachedGLTF(modelUrl, loader);
   // SAFETY: Three.js SkeletonUtils.clone preserves skinning and hierarchy
   const root = SkeletonUtils.clone(baseGltf.scene) as THREE.Group;
 
@@ -94,16 +176,29 @@ export async function assembleModularCharacter(
     throw new Error(`Model (${modelUrl}) missing skeleton!`);
   }
 
-  // Attach socket accessory
-  const attachSocketProp = async (url: string, boneName: string) => {
+  // Attach socket accessory (cached GLTF + optional Western color tint)
+  const attachSocketProp = async (url: string, boneName: string, tintColor?: number | THREE.Color) => {
     if (!url || !skeleton) return;
     try {
-      const propGltf = await loader.loadAsync(url);
+      const propGltf = await loadCachedGLTF(url, loader);
       const cloned = SkeletonUtils.clone(propGltf.scene);
 
       cloned.traverse((child) => {
         const isIcosphere = child.name.toLowerCase().includes("icosphere");
         if (isIcosphere) return;
+
+        if (tintColor !== undefined && (child as THREE.Mesh).isMesh) {
+          const mesh = child as THREE.Mesh;
+          const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+          const tinted = mats.map((m) => {
+            if (!m) return m;
+            const cm = (m as THREE.MeshStandardMaterial).clone();
+            cm.color.lerp(new THREE.Color(tintColor), 0.45);
+            cm.roughness = Math.max(cm.roughness ?? 0.8, 0.82);
+            return cm;
+          });
+          mesh.material = Array.isArray(mesh.material) ? tinted : (tinted[0] ?? mesh.material);
+        }
 
         // SAFETY: Type assertion verified by Three.js isSkinnedMesh check
         if ((child as THREE.SkinnedMesh).isSkinnedMesh) {
@@ -122,10 +217,10 @@ export async function assembleModularCharacter(
   };
 
   if (config.accessoryUrl) {
-    await attachSocketProp(config.accessoryUrl, "Head_08");
+    await attachSocketProp(config.accessoryUrl, "Head_08", config.hatColor);
   }
   if (config.holsterUrl) {
-    await attachSocketProp(config.holsterUrl, "Hips_01");
+    await attachSocketProp(config.holsterUrl, "Hips_01", config.holsterColor);
   }
 
   const materials: THREE.MeshStandardMaterial[] = [];
@@ -159,11 +254,12 @@ export async function assembleModularCharacter(
           if (mat) {
             const mName = mat.name.toLowerCase();
             const isShirt = mName.includes("shirt");
-            const isSuit = mName.includes("outfit");
+            const isSuit = mName.includes("outfit") || mName.includes("suit");
             if (isShirt || isSuit) {
               const clonedMat = (mat as THREE.MeshStandardMaterial).clone();
               clonedMat.color.set(config.outfitColor);
-              clonedMat.roughness = 0.72;
+              clonedMat.roughness = 0.84;
+              clonedMat.metalness = 0.05;
 
               clonedMat.onBeforeCompile = (shader) => {
                 if (isShirt) {
@@ -197,6 +293,23 @@ export async function assembleModularCharacter(
                 }
               };
               clonedMat.customProgramCacheKey = () => (isShirt ? "tinted_shirt_v2" : "tinted_suit_v2");
+              newMats.push(clonedMat);
+            } else if (mName.includes("pants") && config.pantsColor !== undefined) {
+              const clonedMat = (mat as THREE.MeshStandardMaterial).clone();
+              clonedMat.color.lerp(new THREE.Color(config.pantsColor), 0.65);
+              clonedMat.roughness = 0.86;
+              clonedMat.metalness = 0.04;
+              newMats.push(clonedMat);
+            } else if ((mName.includes("boot") || mName.includes("shoes")) && config.bootsColor !== undefined) {
+              const clonedMat = (mat as THREE.MeshStandardMaterial).clone();
+              clonedMat.color.lerp(new THREE.Color(config.bootsColor), 0.55);
+              clonedMat.roughness = 0.78;
+              clonedMat.metalness = 0.08;
+              newMats.push(clonedMat);
+            } else if (mName.includes("suspender") && config.holsterColor !== undefined) {
+              const clonedMat = (mat as THREE.MeshStandardMaterial).clone();
+              clonedMat.color.lerp(new THREE.Color(config.holsterColor), 0.55);
+              clonedMat.roughness = 0.82;
               newMats.push(clonedMat);
             } else {
               newMats.push(mat);

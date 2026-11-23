@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { createModelObject, type ModelObject } from "../../core/models.js";
-import { assembleModularCharacter, getRandomModularConfig } from "./modular.js";
+import { assembleModularCharacter, getNPCModelByIndex, getRandomHatUrl, getRandomModularConfig } from "./modular.js";
 import { getGroundElevation } from "../../environment/terrain/height.js";
 import { CollisionWorld, type ICollisionWorld, type SeparableEntity } from "../../core/collision.js";
 import { NPCNavigator, type INPCNavigator } from "./navigator.js";
@@ -20,6 +20,8 @@ export interface TownActivity {
 export interface NPCOptions {
   name?: string;
   modelKey?: AssetKey;
+  modelUrl?: string;
+  modelIndex?: number;
   useModular?: boolean;
   modularAccessory?: "cowboy_hat" | "none" | "random";
   outfitColor?: number | THREE.Color;
@@ -203,19 +205,28 @@ export class NPC implements NPCController {
 
     let accessoryUrl = randConfig.accessoryUrl;
     if (this.options.modularAccessory === "cowboy_hat") {
-      accessoryUrl = "/models/npc/modular/accessories/arthur_hat.glb";
+      accessoryUrl = getRandomHatUrl();
     } else if (this.options.modularAccessory === "none") {
       accessoryUrl = "";
     }
 
     const finalColor = this.options.outfitColor ?? randConfig.outfitColor;
+    const resolvedModelUrl =
+      this.options.modelUrl ??
+      (this.options.modelIndex !== undefined
+        ? getNPCModelByIndex(this.options.modelIndex)
+        : randConfig.modelUrl);
 
     const modelObj = (this.options.useModular ?? true) || !this.options.modelKey
       ? await assembleModularCharacter({
-          modelUrl: "/models/npc/arthur.glb",
+          modelUrl: resolvedModelUrl,
           accessoryUrl,
           holsterUrl: randConfig.holsterUrl,
           outfitColor: finalColor,
+          pantsColor: randConfig.pantsColor,
+          bootsColor: randConfig.bootsColor,
+          hatColor: randConfig.hatColor,
+          holsterColor: randConfig.holsterColor,
         }, {
           position: this.currentPos,
           scale,

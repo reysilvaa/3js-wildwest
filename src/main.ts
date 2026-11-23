@@ -78,26 +78,12 @@ const NPC_NAMES = [
   "John",
 ];
 
-// 10 strictly non-identical, unique period-accurate Western outfit colors
-const NPC_UNIQUE_COLORS: number[] = [
-  0x1c3b57, // 0: Deep Navy Blue
-  0x8a4622, // 1: Saddle Brown Leather
-  0x181818, // 2: Pitch Charcoal Black
-  0xc49b5c, // 3: Dusty Buckskin Tan
-  0x781e28, // 4: Rich Wine Burgundy
-  0x2e4f32, // 5: Dark Forest Olive
-  0xba442b, // 6: Terracotta Crimson
-  0xd5cfc4, // 7: Antique Linen Cream
-  0x50453d, // 8: Weathered Slate Tweed
-  0x5e381b, // 9: Burnt Umber / Chestnut
-];
-
 const npcs = NPC_SPAWN_SPOTS.map((pos, i) =>
   initNPC(scene, buildingBoxes, camera, {
     name: NPC_NAMES[i] ?? `Resident ${i + 1}`,
+    modelIndex: i,
     useModular: true,
-    modularAccessory: i % 2 === 0 ? "cowboy_hat" : "none",
-    outfitColor: NPC_UNIQUE_COLORS[i]!,
+    modularAccessory: "random",
     initialPos: pos,
     scale: 0.83 + (i % 3) * 0.02,
     walkSpeed: 1.02 + (i % 4) * 0.04,
