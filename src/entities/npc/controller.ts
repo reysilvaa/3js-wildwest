@@ -21,9 +21,7 @@ export interface NPCOptions {
   name?: string;
   modelKey?: AssetKey;
   useModular?: boolean;
-  modularHead?: "cowboy" | "outlaw" | "jokowi" | "arthur" | "random";
-  modularOutfit?: "suit" | "cowboy" | "arthur" | "random";
-  modularAccessory?: "cowboy_hat" | "arthur_hat" | "none" | "random";
+  modularAccessory?: "cowboy_hat" | "none" | "random";
   outfitColor?: number | THREE.Color;
   initialPos?: [number, number, number];
   buildingBoxes?: THREE.Box3[];
@@ -31,6 +29,7 @@ export interface NPCOptions {
   walkSpeed?: number;
   dataUrl?: string;
   walkAnimUrl?: string;
+  idleAnimUrl?: string;
   scale?: number;
   stationary?: boolean;
   facingAngle?: number;
@@ -49,6 +48,75 @@ export interface NPCController extends SeparableEntity {
   faceTarget: (targetPos: THREE.Vector3, duration?: number) => void;
   pause: (duration: number) => void;
   isPaused: () => boolean;
+}
+
+let sharedAnimCachePromise: Promise<Map<string, THREE.AnimationClip>> | null = null;
+
+function filterTracks(clip: THREE.AnimationClip): THREE.AnimationClip {
+  const cloned = clip.clone();
+  cloned.tracks = cloned.tracks.filter((t) => {
+    const lower = t.name.toLowerCase();
+    // Filter out hand, finger & twist tracks to keep Arthur's hands in natural relaxed pose
+    if (
+      lower.includes("hand") ||
+      lower.includes("thumb") ||
+      lower.includes("index") ||
+      lower.includes("middle") ||
+      lower.includes("ring") ||
+      lower.includes("pinky") ||
+      lower.includes("forearm1") ||
+      lower.includes("forearm2") ||
+      lower.includes(".001") ||
+      lower.includes(".002") ||
+      lower.includes(".003")
+    ) {
+      return false;
+    }
+    if (t.name.endsWith(".quaternion") || t.name.endsWith(".rotation")) return true;
+    if (lower.includes("hips") && (t.name.endsWith(".position") || t.name.endsWith(".translation"))) return true;
+    return false;
+  });
+  return cloned;
+}
+
+async function getSharedNPCAnimations(
+  loader = new GLTFLoader(),
+  walkUrl = "/models/movement/walk.glb",
+  idleUrl = "/models/movement/idle.glb"
+): Promise<Map<string, THREE.AnimationClip>> {
+  if (sharedAnimCachePromise) return sharedAnimCachePromise;
+
+  sharedAnimCachePromise = (async () => {
+    const map = new Map<string, THREE.AnimationClip>();
+    const [idleGltf, walkGltf] = await Promise.all([
+      loader.loadAsync(idleUrl).catch((err) => {
+        console.warn("[NPC] Failed to load idle animation:", err);
+        return null;
+      }),
+      loader.loadAsync(walkUrl).catch((err) => {
+        console.warn("[NPC] Failed to load walk animation:", err);
+        return null;
+      }),
+    ]);
+
+    if (idleGltf?.animations) {
+      for (const a of idleGltf.animations) {
+        if (a.name === "Idle" || a.name === "Wave") {
+          map.set(a.name, filterTracks(a));
+        }
+      }
+    }
+
+    if (walkGltf?.animations && walkGltf.animations.length > 0) {
+      const walkClip = walkGltf.animations[0]!;
+      walkClip.name = "Walk";
+      map.set("Walk", filterTracks(walkClip));
+    }
+
+    return map;
+  })();
+
+  return sharedAnimCachePromise;
 }
 
 export class NPC implements NPCController {
@@ -133,47 +201,20 @@ export class NPC implements NPCController {
     const scale = this.options.scale ?? 0.85;
     const randConfig = getRandomModularConfig();
 
-    let headUrl = randConfig.headUrl;
-    if (this.options.modularHead === "jokowi") {
-      headUrl = "/models/npc/modular/heads/head_default.glb";
-    } else if (this.options.modularHead === "arthur") {
-      headUrl = "/models/npc/modular/heads/arthur_head.glb";
-    } else if (this.options.modularHead === "cowboy") {
-      headUrl = "/models/npc/modular/heads/cowboy_head.glb";
-    } else if (this.options.modularHead === "outlaw") {
-      headUrl = "/models/npc/modular/heads/outlaw_head.glb";
-    }
-
-    let outfitUrl = randConfig.outfitUrl;
-    if (this.options.modularOutfit === "suit") {
-      outfitUrl = "/models/npc/modular/outfits/outfit_suit.glb";
-    } else if (this.options.modularOutfit === "arthur" || this.options.modularOutfit === "cowboy") {
-      outfitUrl = "/models/npc/modular/outfits/outfit_arthur.glb";
-    }
-
     let accessoryUrl = randConfig.accessoryUrl;
-    let bandanaUrl = randConfig.bandanaUrl;
     if (this.options.modularAccessory === "cowboy_hat") {
       accessoryUrl = "/models/npc/modular/accessories/arthur_hat.glb";
     } else if (this.options.modularAccessory === "none") {
       accessoryUrl = "";
-    }
-    if (headUrl.includes("cowboy_head") || headUrl.includes("outlaw_head")) {
-      accessoryUrl = "";
-      bandanaUrl = "";
     }
 
     const finalColor = this.options.outfitColor ?? randConfig.outfitColor;
 
     const modelObj = (this.options.useModular ?? true) || !this.options.modelKey
       ? await assembleModularCharacter({
-          headUrl,
-          outfitUrl,
-          bodyUrl: "/models/npc/modular/bodies/body_hands.glb",
+          modelUrl: "/models/npc/arthur.glb",
           accessoryUrl,
-          bandanaUrl,
           holsterUrl: randConfig.holsterUrl,
-          bootsUrl: randConfig.bootsUrl,
           outfitColor: finalColor,
         }, {
           position: this.currentPos,
@@ -189,28 +230,23 @@ export class NPC implements NPCController {
 
     this.model = modelObj;
 
-    if (this.options.stationary) {
-      modelObj.root.rotation.y = this.options.facingAngle ?? 0;
-      return modelObj;
-    }
-
-    // Load walk animation
     const gltfLoader = new GLTFLoader();
     const walkUrl = this.options.walkAnimUrl ?? "/models/movement/walk.glb";
+    const idleUrl = this.options.idleAnimUrl ?? "/models/movement/idle.glb";
+
     try {
-      const animGltf = await gltfLoader.loadAsync(walkUrl);
-      if (animGltf.animations && animGltf.animations.length > 0) {
-        const walkClip = animGltf.animations[0]!;
-        walkClip.name = "Walk";
-        walkClip.tracks = walkClip.tracks.filter((t) => {
-          if (t.name.endsWith(".quaternion") || t.name.endsWith(".rotation")) return true;
-          if (t.name.toLowerCase().includes("hips") && (t.name.endsWith(".position") || t.name.endsWith(".translation"))) return true;
-          return false;
-        });
-        modelObj.animations.set("Walk", walkClip);
+      const animMap = await getSharedNPCAnimations(gltfLoader, walkUrl, idleUrl);
+      for (const [name, clip] of animMap) {
+        modelObj.animations.set(name, clip.clone());
       }
     } catch (err) {
-      console.warn(`[NPC ${this.name}] Failed to load walk animation:`, err);
+      console.warn(`[NPC ${this.name}] Failed to load animations:`, err);
+    }
+
+    if (this.options.stationary) {
+      modelObj.root.rotation.y = this.options.facingAngle ?? 0;
+      this.fadeToAction("Idle", 0.2);
+      return modelObj;
     }
 
     this.fadeToAction("Idle", 0.2);

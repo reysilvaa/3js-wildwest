@@ -92,25 +92,10 @@ const NPC_UNIQUE_COLORS: number[] = [
   0x5e381b, // 9: Burnt Umber / Chestnut
 ];
 
-const HEAD_STYLES = [
-  "arthur",
-  "cowboy",
-  "outlaw",
-  "jokowi",
-  "arthur",
-  "cowboy",
-  "outlaw",
-  "arthur",
-  "cowboy",
-  "outlaw",
-] as const;
-
 const npcs = NPC_SPAWN_SPOTS.map((pos, i) =>
   initNPC(scene, buildingBoxes, camera, {
     name: NPC_NAMES[i] ?? `Resident ${i + 1}`,
     useModular: true,
-    modularHead: HEAD_STYLES[i] ?? "random",
-    modularOutfit: i % 2 === 0 ? "arthur" : "suit",
     modularAccessory: i % 2 === 0 ? "cowboy_hat" : "none",
     outfitColor: NPC_UNIQUE_COLORS[i]!,
     initialPos: pos,

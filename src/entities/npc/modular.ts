@@ -4,65 +4,11 @@ import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
 import type { ModelObject } from "../../core/models.js";
 
 export interface ModularPartsConfig {
-  headUrl?: string;
-  hairUrl?: string;
-  bodyUrl?: string;
-  outfitUrl?: string;
+  modelUrl?: string;
   accessoryUrl?: string;
-  bandanaUrl?: string;
   holsterUrl?: string;
-  bootsUrl?: string;
   outfitColor?: number | THREE.Color;
 }
-
-export const FRONTIER_HEADS = [
-  { id: "arthur", name: "Arthur Morgan", headUrl: "/models/npc/modular/heads/arthur_head.glb", hasHat: false },
-  { id: "cowboy", name: "Dusty Cowboy", headUrl: "/models/npc/modular/heads/cowboy_head.glb", hasHat: true },
-  { id: "outlaw", name: "Rugged Outlaw", headUrl: "/models/npc/modular/heads/outlaw_head.glb", hasHat: true },
-] as const;
-
-export const NPC_ARCHETYPES = [
-  {
-    id: "frontier",
-    name: "Frontier Townsfolk",
-    outfitUrl: "/models/npc/modular/outfits/outfit_arthur.glb",
-    allowedColors: [
-      0x22354c, // Deep Navy Blue (Classic Arthur)
-      0x8a4b24, // Rust / Saddle Leather
-      0xc49c63, // Dusty Tan Buckskin
-      0x222222, // Charcoal Black (Gunslinger)
-      0x6b1c24, // Dark Burgundy (Gambler)
-      0x384a32, // Forest Olive (Scout)
-      0x943d2c, // Terracotta Red
-      0xd5cfc4, // Dusty White / Cream Linen
-    ],
-  },
-  {
-    id: "suit",
-    name: "Town Gentleman / Banker",
-    outfitUrl: "/models/npc/modular/outfits/outfit_suit.glb",
-    headUrl: "/models/npc/modular/heads/head_default.glb",
-    allowedColors: [
-      0x181818, // Pitch Black (Undertaker / Mayor)
-      0x1f2937, // Midnight Slate (Banker)
-      0x3d3835, // Charcoal Tweed (Doctor)
-      0x4a3728, // Dark Brown Wool (Merchant)
-      0x2b382d, // Dark Hunter Green (Lawyer)
-    ],
-  },
-] as const;
-
-export const MODULAR_HEADS = [
-  { id: "arthur", name: "Arthur Morgan", headUrl: "/models/npc/modular/heads/arthur_head.glb" },
-  { id: "cowboy", name: "Dusty Cowboy", headUrl: "/models/npc/modular/heads/cowboy_head.glb" },
-  { id: "outlaw", name: "Rugged Outlaw", headUrl: "/models/npc/modular/heads/outlaw_head.glb" },
-  { id: "jokowi", name: "Jokowi", headUrl: "/models/npc/modular/heads/head_default.glb" },
-] as const;
-
-export const MODULAR_OUTFITS = [
-  { id: "arthur", name: "Arthur Frontier", outfitUrl: "/models/npc/modular/outfits/outfit_arthur.glb" },
-  { id: "suit",   name: "Frontier Suit",   outfitUrl: "/models/npc/modular/outfits/outfit_suit.glb" },
-] as const;
 
 export const WESTERN_OUTFIT_PALETTE = [
   0x1f1f1f, // Charcoal Black (Undertaker / Gentleman)
@@ -76,55 +22,23 @@ export const WESTERN_OUTFIT_PALETTE = [
 
 const MODULAR_HATS = [
   "/models/npc/modular/accessories/arthur_hat.glb",
-  "/models/npc/modular/accessories/cowboy_hat.glb",
 ];
 
 const MODULAR_HOLSTERS = [
   "/models/npc/modular/accessories/arthur_holster.glb",
-  "/models/npc/modular/accessories/gun_holster.glb",
 ];
 
 export function getRandomModularConfig(): Required<ModularPartsConfig> {
-  // 50% frontier townsfolk/cowboys/outlaws, 50% suit gentlemen/bankers
-  const isFrontier = Math.random() < 0.50;
-  const archetype = isFrontier ? NPC_ARCHETYPES[0]! : NPC_ARCHETYPES[1]!;
-  
-  let headUrl: string;
-  let hasIntegratedHat = false;
-  if (isFrontier) {
-    const picked = FRONTIER_HEADS[Math.floor(Math.random() * FRONTIER_HEADS.length)]!;
-    headUrl = picked.headUrl;
-    hasIntegratedHat = picked.hasHat;
-  } else {
-    headUrl = NPC_ARCHETYPES[1].headUrl;
-  }
-
-  const outfitColor = archetype.allowedColors[Math.floor(Math.random() * archetype.allowedColors.length)]!;
-
-  const wearsHat = Math.random() < 0.70;
-  const pickedHat = MODULAR_HATS[Math.floor(Math.random() * MODULAR_HATS.length)]!;
-  const accessoryUrl = (!hasIntegratedHat && wearsHat) ? pickedHat : "";
-
-  // 80% chance of wearing Gun Holster & Pistol at hips
+  const outfitColor = WESTERN_OUTFIT_PALETTE[Math.floor(Math.random() * WESTERN_OUTFIT_PALETTE.length)]!;
+  const wearsHat = Math.random() < 0.65;
+  const accessoryUrl = wearsHat ? MODULAR_HATS[0]! : "";
   const wearsHolster = Math.random() < 0.80;
-  const pickedHolster = MODULAR_HOLSTERS[Math.floor(Math.random() * MODULAR_HOLSTERS.length)]!;
-  const holsterUrl = wearsHolster ? pickedHolster : "";
-
-  // Bandana overlay disabled: rigid neck scarves clip through beards and shirts
-  const bandanaUrl = "";
-
-  // Base outfits have built-in footwear. Keeping bootsUrl empty avoids duplicate overlapping footwear.
-  const bootsUrl = "";
+  const holsterUrl = wearsHolster ? MODULAR_HOLSTERS[0]! : "";
 
   return {
-    headUrl,
-    outfitUrl: archetype.outfitUrl,
-    bodyUrl: "/models/npc/modular/bodies/body_hands.glb",
-    hairUrl: "",
+    modelUrl: "/models/npc/arthur.glb",
     accessoryUrl,
-    bandanaUrl,
     holsterUrl,
-    bootsUrl,
     outfitColor,
   };
 }
@@ -137,8 +51,8 @@ export interface ModularModelOptions {
 }
 
 /**
- * Assembles a fully rigged humanoid NPC from modular parts (Head, Outfit, Hat, Bandana, Gun Holster, Boots)
- * all bound to the unified 79-bone skeleton.
+ * Assembles a complete, high-quality Western NPC (Arthur Morgan) with optional
+ * socket accessories (cowboy hat, holster) and dynamic outfit color tinting.
  */
 export async function assembleModularCharacter(
   config: ModularPartsConfig = {},
@@ -146,14 +60,13 @@ export async function assembleModularCharacter(
   parentScene?: THREE.Object3D,
   loader = new GLTFLoader()
 ): Promise<ModelObject> {
-  const outfitUrl = config.outfitUrl || "/models/npc/modular/outfits/outfit_suit.glb";
-  const bodyUrl = config.bodyUrl || "/models/npc/modular/bodies/body_hands.glb";
-  const headUrl = config.headUrl || "/models/npc/modular/heads/cowboy_head.glb";
+  const modelUrl = config.modelUrl || "/models/npc/arthur.glb";
 
-  const outfitGltf = await loader.loadAsync(outfitUrl);
-  const root = SkeletonUtils.clone(outfitGltf.scene) as THREE.Group;
+  const baseGltf = await loader.loadAsync(modelUrl);
+  // SAFETY: Three.js SkeletonUtils.clone preserves skinning and hierarchy
+  const root = SkeletonUtils.clone(baseGltf.scene) as THREE.Group;
 
-  // Purge any stray static / icosphere geometry from outfit
+  // Purge any stray static / icosphere geometry
   const toRemove: THREE.Object3D[] = [];
   root.traverse((c) => {
     if (c.name.toLowerCase().includes("icosphere")) {
@@ -168,6 +81,7 @@ export async function assembleModularCharacter(
   let baseArmature: THREE.Object3D | null = null;
 
   root.traverse((child) => {
+    // SAFETY: Type assertion verified by Three.js isSkinnedMesh property check
     if ((child as THREE.SkinnedMesh).isSkinnedMesh && !skeleton) {
       skeleton = (child as THREE.SkinnedMesh).skeleton;
     }
@@ -177,82 +91,42 @@ export async function assembleModularCharacter(
   });
 
   if (!skeleton) {
-    throw new Error(`Base modular outfit (${outfitUrl}) missing skeleton!`);
+    throw new Error(`Model (${modelUrl}) missing skeleton!`);
   }
 
-  // Helper to rebind and attach SkinnedMeshes from any modular asset onto the master skeleton.
-  //
-  // KEY INSIGHT (from Blender MCP + raw GLB inspection):
-  //   - All modular GLBs share IDENTICAL inverseBindMatrices (same 79-bone Jokowi_Armature).
-  //   - Therefore m.bindMatrix from each part is valid and must be used — NOT identity.
-  //   - We call cloned.updateWorldMatrix(true,true) first so m.bindMatrix reflects
-  //     the actual world transform before we pass it to .bind().
-  //   - Using identityMatrix would skip the bone rest-pose compensation → parts explode.
-  const attachPartFromUrl = async (url: string, name: string) => {
-    if (!url) return;
+  // Attach socket accessory
+  const attachSocketProp = async (url: string, boneName: string) => {
+    if (!url || !skeleton) return;
     try {
-      const partGltf = await loader.loadAsync(url);
-      const cloned = SkeletonUtils.clone(partGltf.scene);
+      const propGltf = await loader.loadAsync(url);
+      const cloned = SkeletonUtils.clone(propGltf.scene);
 
-      const meshes: THREE.SkinnedMesh[] = [];
       cloned.traverse((child) => {
-        if ((child as THREE.SkinnedMesh).isSkinnedMesh) {
-          // Filter Icosphere (case-insensitive) — present in every GLB as placeholder
-          const isIcosphere = child.name.toLowerCase().includes("icosphere");
-          if (isIcosphere) return;
+        const isIcosphere = child.name.toLowerCase().includes("icosphere");
+        if (isIcosphere) return;
 
+        // SAFETY: Type assertion verified by Three.js isSkinnedMesh check
+        if ((child as THREE.SkinnedMesh).isSkinnedMesh) {
           const sm = child as THREE.SkinnedMesh;
-          // Filter stray meshes with no valid bone weights (causes loose geometry at world origin)
-          const skinWeight = sm.geometry.attributes["skinWeight"];
-          let maxWeight = 0;
-          if (skinWeight) {
-            const arr = skinWeight.array;
-            for (let i = 0; i < arr.length; i++) {
-              const v = arr[i];
-              if (v !== undefined && v > maxWeight) maxWeight = v;
-            }
-          }
-          if (maxWeight > 0.001) {
-            meshes.push(sm);
-          }
+          sm.bind(skeleton!, sm.bindMatrix);
+          (baseArmature || root).add(sm);
+        } else if ((child as THREE.Mesh).isMesh) {
+          const targetBone = skeleton?.getBoneByName(boneName);
+          if (targetBone) targetBone.add(child);
+          else root.add(child);
         }
       });
-
-      for (const m of meshes) {
-        // Reset local transform so mesh sits at world origin matching the master skeleton rest pose.
-        // All modular GLBs share identical inverse bind matrices (same 79-bone Jokowi_Armature,
-        // verified: all IBM hashes match). Node transforms are identity in GLB (no TRS, no matrix).
-        // Therefore bindMatrix must be identity — the mesh is at origin when bound.
-        m.position.set(0, 0, 0);
-        m.rotation.set(0, 0, 0);
-        m.scale.set(1, 1, 1);
-        // SAFETY: identity bindMatrix is correct — mesh node has no transform in GLB.
-        m.bind(skeleton!, new THREE.Matrix4());
-        (baseArmature || root).add(m);
-      }
     } catch (err) {
-      console.warn(`[ModularNPC] Failed to attach ${name} from ${url}:`, err);
+      console.warn(`[ModularNPC] Failed to attach prop from ${url}:`, err);
     }
   };
 
-  // outfit_arthur already includes modeled hands & arms
-  const hasHands = outfitUrl.includes("outfit_arthur");
-  if (!hasHands) {
-    await attachPartFromUrl(bodyUrl, "Hands");
+  if (config.accessoryUrl) {
+    await attachSocketProp(config.accessoryUrl, "Head_08");
   }
-
-  await attachPartFromUrl(headUrl, "Head");
-
-  // Prevent duplicate hat & bandana if head already contains integrated accessories
-  const hasHeadAccessories = headUrl.includes("cowboy_head") || headUrl.includes("outlaw_head");
-  if (config.accessoryUrl && !hasHeadAccessories) {
-    await attachPartFromUrl(config.accessoryUrl, "Hat");
+  if (config.holsterUrl) {
+    await attachSocketProp(config.holsterUrl, "Hips_01");
   }
-  if (config.bandanaUrl && !hasHeadAccessories) {
-    await attachPartFromUrl(config.bandanaUrl, "Bandana");
-  }
-  if (config.holsterUrl) await attachPartFromUrl(config.holsterUrl, "GunHolster");
-  if (config.bootsUrl) await attachPartFromUrl(config.bootsUrl, "Boots");
 
   const materials: THREE.MeshStandardMaterial[] = [];
   root.traverse((child) => {
@@ -371,9 +245,27 @@ export async function assembleModularCharacter(
 
   const mixer = new THREE.AnimationMixer(root);
   const animations = new Map<string, THREE.AnimationClip>();
-  if (outfitGltf.animations) {
-    for (const clip of outfitGltf.animations) {
+  if (baseGltf.animations) {
+    for (const clip of baseGltf.animations) {
+      clip.tracks = clip.tracks.filter((t: THREE.KeyframeTrack) => {
+        const lower = t.name.toLowerCase();
+        return (
+          !lower.includes("thumb") &&
+          !lower.includes("index") &&
+          !lower.includes("middle") &&
+          !lower.includes("ring") &&
+          !lower.includes("pinky") &&
+          !lower.includes("forearm1") &&
+          !lower.includes("forearm2")
+        );
+      });
       animations.set(clip.name, clip);
+      const lower = clip.name.toLowerCase();
+      if (lower.startsWith("idle") && !animations.has("Idle")) {
+        animations.set("Idle", clip);
+      } else if (lower.startsWith("wave") && !animations.has("Wave")) {
+        animations.set("Wave", clip);
+      }
     }
   }
   const boundingBox = new THREE.Box3().setFromObject(root);
