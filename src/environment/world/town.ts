@@ -136,7 +136,7 @@ export function loadWorld(
             "cart", "well", "fence", "crates", "bench", "hitching_post", "telegraph_pole"
           ]);
           const isBuilding = BUILDING_ASSETS.has(inst.asset);
-          const isObstacle = SOLID_OBSTACLE_ASSETS.has(inst.asset);
+          const isObstacle = SOLID_OBSTACLE_ASSETS.has(inst.asset) && !BUILDING_ASSETS.has(inst.asset);
 
           if (isObstacle) {
             const wholeBox = new THREE.Box3().setFromObject(model);

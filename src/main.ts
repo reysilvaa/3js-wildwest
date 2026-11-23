@@ -53,24 +53,69 @@ let streetCameraActive = false;
 };
 
 const NPC_SPAWN_SPOTS: [number, number, number][] = [
-  [13.2, 0.45, -7.5], // Saloon Porch
-  [6.8, 0.45, 7.0],   // Bank Steps
-  [13.0, 0.45, 0.5],  // Sheriff Office
-  [13.0, 0.45, 12.0], // General Store
-  [6.8, 0.45, -16.0], // Train Depot
+  [13.2, 0.45, -7.5],  // 0: Saloon Porch
+  [6.8, 0.45, 7.0],    // 1: Bank Steps
+  [13.0, 0.45, 0.5],   // 2: Sheriff Office
+  [13.0, 0.45, 12.0],  // 3: General Store
+  [6.8, 0.45, -16.0],  // 4: Train Depot
+  [10.2, 0.45, -3.5],  // 5: Saloon Hitching Post
+  [6.8, 0.45, -6.5],   // 6: Hotel Boardwalk
+  [8.8, 0.45, 17.5],   // 7: Water Tower Crossing
+  [9.5, 0.45, -23.5],  // 8: Depot Freight Dock
+  [10.0, 0.45, -1.0],  // 9: Main Street Crossing
 ];
 
-const NPC_NAMES = ["Arthur", "Wyatt", "Doc", "Jack Owi", "Sadie"];
+const NPC_NAMES = [
+  "Arthur",
+  "Wyatt",
+  "Doc",
+  "Sadie",
+  "Jack",
+  "Hosea",
+  "Bill",
+  "Dutch",
+  "Abigail",
+  "John",
+];
+
+// 10 strictly non-identical, unique period-accurate Western outfit colors
+const NPC_UNIQUE_COLORS: number[] = [
+  0x1c3b57, // 0: Deep Navy Blue
+  0x8a4622, // 1: Saddle Brown Leather
+  0x181818, // 2: Pitch Charcoal Black
+  0xc49b5c, // 3: Dusty Buckskin Tan
+  0x781e28, // 4: Rich Wine Burgundy
+  0x2e4f32, // 5: Dark Forest Olive
+  0xba442b, // 6: Terracotta Crimson
+  0xd5cfc4, // 7: Antique Linen Cream
+  0x50453d, // 8: Weathered Slate Tweed
+  0x5e381b, // 9: Burnt Umber / Chestnut
+];
+
+const HEAD_STYLES = [
+  "arthur",
+  "cowboy",
+  "outlaw",
+  "jokowi",
+  "arthur",
+  "cowboy",
+  "outlaw",
+  "arthur",
+  "cowboy",
+  "outlaw",
+] as const;
 
 const npcs = NPC_SPAWN_SPOTS.map((pos, i) =>
   initNPC(scene, buildingBoxes, camera, {
     name: NPC_NAMES[i] ?? `Resident ${i + 1}`,
     useModular: true,
-    modularHead: "random",
-    modularAccessory: "random",
+    modularHead: HEAD_STYLES[i] ?? "random",
+    modularOutfit: i % 2 === 0 ? "arthur" : "suit",
+    modularAccessory: i % 2 === 0 ? "cowboy_hat" : "none",
+    outfitColor: NPC_UNIQUE_COLORS[i]!,
     initialPos: pos,
-    scale: 0.83 + (i % 3) * 0.025,
-    walkSpeed: 1.02 + (i % 4) * 0.05,
+    scale: 0.83 + (i % 3) * 0.02,
+    walkSpeed: 1.02 + (i % 4) * 0.04,
     stationary: false,
     startActivityIndex: i,
   })

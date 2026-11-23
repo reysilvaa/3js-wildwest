@@ -38,18 +38,18 @@ export function initConversationManager(
     const posA = npcA.getPosition();
     const posB = npcB.getPosition();
     const curDist = posA.distanceTo(posB);
-    if (curDist < 1.65 && curDist > 0.01) {
-      const push = (1.65 - curDist) * 0.5;
+    if (curDist < 1.8 && curDist > 0.01) {
+      const push = (1.8 - curDist) * 0.5;
       const pushDir = posA.clone().sub(posB).normalize();
       posA.addScaledVector(pushDir, push);
       posB.addScaledVector(pushDir, -push);
     }
 
-    npcA.faceTarget(npcB.getPosition(), 10.0);
-    npcB.faceTarget(npcA.getPosition(), 10.0);
+    npcA.faceTarget(npcB.getPosition(), 6.0);
+    npcB.faceTarget(npcA.getPosition(), 6.0);
 
-    npcA.pause(9.5);
-    npcB.pause(9.5);
+    npcA.pause(4.8);
+    npcB.pause(4.8);
 
     const location = npcA.getCurrentActivity() || "Town Street";
 
@@ -113,15 +113,18 @@ export function initConversationManager(
 
     checkTimer -= dt;
     if (checkTimer <= 0 && !activeDialogue) {
-      checkTimer = 2.5;
+      checkTimer = 4.0;
 
       for (let i = 0; i < npcs.length; i++) {
         for (let j = i + 1; j < npcs.length; j++) {
           const a = npcs[i]!;
           const b = npcs[j]!;
 
+          // Ponytail: Only converse if at least one NPC is already resting at an activity (never freeze thoroughfare traffic)
+          if (a.getState() !== "ACTIVITY" && b.getState() !== "ACTIVITY") continue;
+
           const dist = a.getPosition().distanceTo(b.getPosition());
-          if (dist < 3.8) {
+          if (dist < 3.0) {
             const pairKey = getPairKey(a, b);
             if (!pairCooldowns.has(pairKey)) {
               triggerPairConversation(a, b);

@@ -28,11 +28,13 @@ export const NPC_ARCHETYPES = [
     outfitUrl: "/models/npc/modular/outfits/outfit_arthur.glb",
     allowedColors: [
       0x22354c, // Deep Navy Blue (Classic Arthur)
-      0x784a22, // Saddle Brown Leather
-      0xb89562, // Dusty Tan Buckskin
-      0x1f1f1f, // Charcoal Black (Gunslinger)
-      0x5c1d24, // Wine / Burgundy (Gambler)
-      0x384732, // Forest Olive (Scout)
+      0x8a4b24, // Rust / Saddle Leather
+      0xc49c63, // Dusty Tan Buckskin
+      0x222222, // Charcoal Black (Gunslinger)
+      0x6b1c24, // Dark Burgundy (Gambler)
+      0x384a32, // Forest Olive (Scout)
+      0x943d2c, // Terracotta Red
+      0xd5cfc4, // Dusty White / Cream Linen
     ],
   },
   {
@@ -41,10 +43,11 @@ export const NPC_ARCHETYPES = [
     outfitUrl: "/models/npc/modular/outfits/outfit_suit.glb",
     headUrl: "/models/npc/modular/heads/head_default.glb",
     allowedColors: [
-      0x1a1a1a, // Pitch Black (Undertaker / Mayor)
-      0x252a34, // Midnight Navy (Banker)
+      0x181818, // Pitch Black (Undertaker / Mayor)
+      0x1f2937, // Midnight Slate (Banker)
       0x3d3835, // Charcoal Tweed (Doctor)
       0x4a3728, // Dark Brown Wool (Merchant)
+      0x2b382d, // Dark Hunter Green (Lawyer)
     ],
   },
 ] as const;
@@ -82,8 +85,8 @@ const MODULAR_HOLSTERS = [
 ];
 
 export function getRandomModularConfig(): Required<ModularPartsConfig> {
-  // 75% frontier townsfolk/cowboys/outlaws, 25% suit gentlemen/bankers
-  const isFrontier = Math.random() < 0.75;
+  // 50% frontier townsfolk/cowboys/outlaws, 50% suit gentlemen/bankers
+  const isFrontier = Math.random() < 0.50;
   const archetype = isFrontier ? NPC_ARCHETYPES[0]! : NPC_ARCHETYPES[1]!;
   
   let headUrl: string;
@@ -275,16 +278,51 @@ export async function assembleModularCharacter(
         mesh.receiveShadow = options.receiveShadow ?? true;
       }
 
-      if (config.outfitColor !== undefined && meshName.includes("outfit")) {
+      if (config.outfitColor !== undefined) {
         const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
         const newMats: THREE.Material[] = [];
         for (const mat of mats) {
           if (mat) {
             const mName = mat.name.toLowerCase();
-            const shouldTint = mName.includes("outfit") || mName.includes("shirt");
-            if (shouldTint) {
+            const isShirt = mName.includes("shirt");
+            const isSuit = mName.includes("outfit");
+            if (isShirt || isSuit) {
               const clonedMat = (mat as THREE.MeshStandardMaterial).clone();
               clonedMat.color.set(config.outfitColor);
+              clonedMat.roughness = 0.72;
+
+              clonedMat.onBeforeCompile = (shader) => {
+                if (isShirt) {
+                  shader.fragmentShader = shader.fragmentShader.replace(
+                    "#include <map_fragment>",
+                    `
+                    #ifdef USE_MAP
+                      vec4 sampledDiffuseColor = texture2D( map, vMapUv );
+                      float lum = dot(sampledDiffuseColor.rgb, vec3(0.299, 0.587, 0.114));
+                      float foldIntensity = clamp(lum / 0.44, 0.35, 1.35);
+                      diffuseColor.rgb = diffuseColor.rgb * foldIntensity;
+                    #endif
+                    `
+                  );
+                } else if (isSuit) {
+                  shader.fragmentShader = shader.fragmentShader.replace(
+                    "#include <map_fragment>",
+                    `
+                    #ifdef USE_MAP
+                      vec4 sampledDiffuseColor = texture2D( map, vMapUv );
+                      float lum = dot(sampledDiffuseColor.rgb, vec3(0.299, 0.587, 0.114));
+                      if (lum > 0.6) {
+                        diffuseColor.rgb = vec3(0.92);
+                      } else {
+                        float suitFolds = clamp(lum / 0.08, 0.35, 1.5);
+                        diffuseColor.rgb = diffuseColor.rgb * suitFolds;
+                      }
+                    #endif
+                    `
+                  );
+                }
+              };
+              clonedMat.customProgramCacheKey = () => (isShirt ? "tinted_shirt_v2" : "tinted_suit_v2");
               newMats.push(clonedMat);
             } else {
               newMats.push(mat);

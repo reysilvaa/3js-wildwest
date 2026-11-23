@@ -48,7 +48,7 @@ export const registeredNPCs: NPCController[] = [];
  * High-performance mutual separation pass to prevent NPCs from ever overlapping or clipping.
  */
 export function resolveNPCCollisions(npcs: NPCController[]): void {
-  const minDist = 0.86; // 2 * radius (body clearance ~0.86m)
+  const minDist = 1.4; // Ponytail: 1.4m personal buffer eliminates mesh clipping
   const minDistSq = minDist * minDist;
 
   for (let i = 0; i < npcs.length; i++) {
@@ -105,7 +105,7 @@ export function initNPC(
     modelKey,
     useModular = true,
     modularHead = "random",
-    modularOutfit: _modularOutfit,
+    modularOutfit,
     modularAccessory = "random",
     outfitColor,
     initialPos = [10.0, 0.0, -10.0],
@@ -214,9 +214,6 @@ export function initNPC(
   let stuckTimer = 0;
   const yAxis = new THREE.Vector3(0, 1, 0);
 
-  // Each NPC gets a persistent lateral lane preference across the street corridor (X: 7.6 to 12.4)
-  const laneBias = (Math.random() - 0.5) * 2.8;
-
   function planPathTo(destination: THREE.Vector3) {
     pathQueue.length = 0;
     if (streetNodes.length === 0) {
@@ -249,15 +246,14 @@ export function initNPC(
     }
 
     const pushRandomizedNode = (baseNode: THREE.Vector3) => {
-      const lateralJitter = (Math.random() - 0.5) * 1.2;
-      const targetX = Math.max(7.6, Math.min(12.4, baseNode.x + laneBias + lateralJitter));
-      const targetZ = baseNode.z + (Math.random() - 0.5) * 1.2;
-      const candidate = new THREE.Vector3(targetX, baseNode.y, targetZ);
-      if (!checkCollision(candidate, 0.46)) {
-        pathQueue.push(candidate);
-      } else {
-        pathQueue.push(baseNode.clone());
-      }
+      // Ponytail: Two-way traffic rule. Northbound (going to -Z) hugs East side (X ~ 10.8),
+      // Southbound (going to +Z) hugs West side (X ~ 8.8). Keeps opposing flows 2m apart!
+      const movingNorth = destination.z < currentPos.z;
+      const laneX = movingNorth ? 10.8 : 8.8;
+      const jitter = (Math.random() - 0.5) * 0.4;
+      const targetX = Math.max(7.8, Math.min(12.2, laneX + jitter));
+      const targetZ = baseNode.z + (Math.random() - 0.5) * 0.6;
+      pathQueue.push(new THREE.Vector3(targetX, baseNode.y, targetZ));
     };
 
     if (minStartDist > 1.4) {
@@ -300,7 +296,7 @@ export function initNPC(
       const oPos = other.getPosition();
       const dx = pos.x - oPos.x;
       const dz = pos.z - oPos.z;
-      if (dx * dx + dz * dz < 1.65 * 1.65) return true;
+      if (dx * dx + dz * dz < 1.15 * 1.15) return true;
     }
     return false;
   }
@@ -334,21 +330,6 @@ export function initNPC(
     };
     applyBoxes(buildingBoxes);
     applyBoxes(staticBoxes);
-
-    for (const other of registeredNPCs) {
-      if (other.id === npcId) continue;
-      const oPos = other.getPosition();
-      const dx = pos.x - oPos.x;
-      const dz = pos.z - oPos.z;
-      const dSq = dx * dx + dz * dz;
-      const minDist = 1.6;
-      if (dSq < minDist * minDist && dSq > 0.0001) {
-        const d = Math.sqrt(dSq);
-        const overlap = minDist - d;
-        pos.x += (dx / d) * overlap * 0.6;
-        pos.z += (dz / d) * overlap * 0.6;
-      }
-    }
   }
 
   function fadeToAction(name: string, duration = 0.3) {
@@ -444,6 +425,13 @@ export function initNPC(
     headUrl = "/models/npc/modular/heads/outlaw_head.glb";
   }
 
+  let outfitUrl = randConfig.outfitUrl;
+  if (modularOutfit === "suit") {
+    outfitUrl = "/models/npc/modular/outfits/outfit_suit.glb";
+  } else if (modularOutfit === "arthur" || modularOutfit === "cowboy") {
+    outfitUrl = "/models/npc/modular/outfits/outfit_arthur.glb";
+  }
+
   let accessoryUrl = randConfig.accessoryUrl;
   let bandanaUrl = randConfig.bandanaUrl;
   if (modularAccessory === "cowboy_hat") {
@@ -454,7 +442,7 @@ export function initNPC(
   // Heads that already include modeled accessories (hat & neck scarf) never get accessory overlays
   if (headUrl.includes("cowboy_head") || headUrl.includes("outlaw_head")) {
     accessoryUrl = "";
-    bandanaUrl = "";
+    bandanaUrl = "";  
   }
 
   const finalColor = outfitColor ?? randConfig.outfitColor;
@@ -462,7 +450,7 @@ export function initNPC(
   const modelPromise: Promise<ModelObject> = (useModular || !modelKey)
     ? assembleModularCharacter({
         headUrl,
-        outfitUrl: randConfig.outfitUrl,
+        outfitUrl,
         bodyUrl: "/models/npc/modular/bodies/body_hands.glb",
         accessoryUrl,
         bandanaUrl,
@@ -639,12 +627,9 @@ export function initNPC(
 
         let steerDir = dirVec.clone();
 
-        // === VIRTUAL VISION CONE & ANTICIPATORY STEERING ===
-        // === VIRTUAL VISION CONE & ANTICIPATORY STEERING ===
-        // 1. Dynamic NPC-to-NPC Vision & Anticipatory Lateral Steering (Jarak Pandang 4.2m)
-        const visionRange = 4.2;
+        // === DYNAMIC LATERAL STEERING (PASS ON THE RIGHT) ===
+        const visionRange = 3.6;
         const avoidanceVec = new THREE.Vector3(0, 0, 0);
-        let yieldForOther = false;
 
         for (const other of registeredNPCs) {
           if (other.id === npcId) continue;
@@ -654,19 +639,14 @@ export function initNPC(
 
           if (distToOther < visionRange && distToOther > 0.01) {
             toOther.normalize();
-            // Check if oncoming NPC is inside forward 140° vision cone
             const forwardDot = steerDir.dot(toOther);
             if (forwardDot > 0.15) {
-              const side = new THREE.Vector3(-steerDir.z, 0, steerDir.x);
-              const cross = steerDir.x * toOther.z - steerDir.z * toOther.x;
-              const steerSign = cross >= 0 ? -1 : 1;
-              const urgency = Math.pow((visionRange - distToOther) / visionRange, 1.2);
-              avoidanceVec.add(side.multiplyScalar(steerSign * urgency * 3.2));
-
-              // If other resident is directly in front within stopping buffer (1.85m):
-              if (distToOther < 1.85 && forwardDot > 0.35) {
-                yieldForOther = true;
-              }
+              // Right-hand rule: step to the right of oncoming NPC
+              const rightSide = new THREE.Vector3(-steerDir.z, 0, steerDir.x);
+              const isToRight = toOther.dot(rightSide) > 0;
+              const steerSign = isToRight ? -1 : 1;
+              const urgency = (visionRange - distToOther) / visionRange;
+              avoidanceVec.add(rightSide.multiplyScalar(steerSign * urgency * 2.8));
             }
           }
         }
@@ -675,23 +655,21 @@ export function initNPC(
           steerDir.add(avoidanceVec).normalize();
         }
 
-        // 2. Multi-Whisker Environment Sensor (Center 2.6m & 1.3m)
-        const forwardProbe = currentPos.clone().add(steerDir.clone().multiplyScalar(2.6));
-        const nearProbe = currentPos.clone().add(steerDir.clone().multiplyScalar(1.3));
-        const centerBlocked = checkCollision(forwardProbe, 0.52) || checkCollision(nearProbe, 0.52);
+        // 2. Multi-Whisker Environment Sensor
+        const forwardProbe = currentPos.clone().add(steerDir.clone().multiplyScalar(2.2));
+        const nearProbe = currentPos.clone().add(steerDir.clone().multiplyScalar(1.1));
+        const centerBlocked = checkCollision(forwardProbe, 0.46) || checkCollision(nearProbe, 0.46);
 
         if (centerBlocked) {
           const angles = [
-            Math.PI / 6, -Math.PI / 6,
-            Math.PI / 3, -Math.PI / 3,
+            Math.PI / 4, -Math.PI / 4,
             Math.PI / 2, -Math.PI / 2,
-            (2 * Math.PI) / 3, (-2 * Math.PI) / 3
+            (3 * Math.PI) / 4, (-3 * Math.PI) / 4
           ];
           for (const angle of angles) {
             const candidate = steerDir.clone().applyAxisAngle(yAxis, angle);
-            const probeFar = currentPos.clone().add(candidate.clone().multiplyScalar(2.0));
-            const probeClose = currentPos.clone().add(candidate.clone().multiplyScalar(1.0));
-            if (!checkCollision(probeFar, 0.52) && !checkCollision(probeClose, 0.52)) {
+            const probeFar = currentPos.clone().add(candidate.clone().multiplyScalar(1.6));
+            if (!checkCollision(probeFar, 0.46)) {
               steerDir = candidate;
               break;
             }
@@ -702,37 +680,27 @@ export function initNPC(
         targetRotation.setFromAxisAngle(yAxis, moveAngle);
         model.root.quaternion.slerp(targetRotation, Math.min(1, 6 * dt));
 
-        // When yielding for oncoming resident: FULL STOP and idle politely
-        if (yieldForOther) {
-          fadeToAction("Idle", 0.2);
-          stuckTimer += dt;
-          if (stuckTimer > 1.2) {
-            advanceToNextActivity();
-            stuckTimer = 0;
+        const stepDist = walkSpeed * dt;
+        const step = steerDir.clone().multiplyScalar(stepDist);
+        const nextPos = currentPos.clone().add(step);
+
+        if (!checkCollision(nextPos, 0.46)) {
+          currentPos.copy(nextPos);
+          stuckTimer = 0;
+          if (currentActionName !== "Walk") {
+            fadeToAction("Walk", 0.2);
           }
         } else {
-          const stepDist = walkSpeed * dt;
-          const step = steerDir.clone().multiplyScalar(stepDist);
-          const nextPos = currentPos.clone().add(step);
-
-          if (!checkCollision(nextPos, 0.52)) {
-            currentPos.copy(nextPos);
+          // Blocked by solid obstacle: pause and re-route after short delay
+          fadeToAction("Idle", 0.2);
+          stuckTimer += dt;
+          if (stuckTimer > 0.9) {
+            if (pathQueue.length > 1) {
+              pathQueue.shift();
+            } else {
+              advanceToNextActivity();
+            }
             stuckTimer = 0;
-            if (currentActionName !== "Walk") {
-              fadeToAction("Walk", 0.2);
-            }
-          } else {
-            // Blocked by obstacle ahead: stop moving and idle rather than pushing into walls
-            fadeToAction("Idle", 0.2);
-            stuckTimer += dt;
-            if (stuckTimer > 0.8) {
-              if (pathQueue.length > 1) {
-                pathQueue.shift();
-              } else {
-                advanceToNextActivity();
-              }
-              stuckTimer = 0;
-            }
           }
         }
 
