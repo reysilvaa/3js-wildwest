@@ -48,21 +48,6 @@ export interface ModelObject {
   destroy(): void;
 }
 
-export interface ModelSystemOptions {
-  scene?: THREE.Scene;
-  defaultCastShadow?: boolean;
-  defaultReceiveShadow?: boolean;
-}
-
-export interface ModelSystem {
-  load(keyOrUrl: AssetKey | string, options?: ModelOptions): Promise<ModelObject>;
-  create(keyOrUrl: AssetKey | string, options?: ModelOptions): Promise<ModelObject>;
-  update(dt: number): void;
-  get(id: string): ModelObject | undefined;
-  getAll(): ModelObject[];
-  remove(idOrObj: string | ModelObject): boolean;
-  clear(): void;
-}
 
 const gltfLoader = new GLTFLoader();
 const rawGltfCache = new Map<string, GLTF>();
@@ -313,8 +298,18 @@ export async function createModelObject(
     },
 
     clone(newId) {
-      const cloned = createSyncClone(modelObj, newId);
-      return cloned;
+      instanceCounter++;
+      const id = newId || `${modelObj.name}_clone_${instanceCounter}`;
+      const clonedRoot = root.clone(true);
+      clonedRoot.name = id;
+      const cloneObj: ModelObject = {
+        ...modelObj,
+        id,
+        root: clonedRoot,
+        addTo(p) { p.add(clonedRoot); return cloneObj; },
+        remove() { if (clonedRoot.parent) clonedRoot.parent.remove(clonedRoot); return cloneObj; },
+      };
+      return cloneObj;
     },
 
     destroy() {
@@ -339,98 +334,3 @@ export async function createModelObject(
   return modelObj;
 }
 
-function createSyncClone(original: ModelObject, newId?: string): ModelObject {
-  instanceCounter++;
-  const id = newId || `${original.name}_clone_${instanceCounter}`;
-  const root = original.root.clone(true);
-  root.name = id;
-
-  const materials: THREE.MeshStandardMaterial[] = [];
-  root.traverse((c) => {
-    // SAFETY: Type assertion verified by Three.js isMesh check
-    if ((c as THREE.Mesh).isMesh) {
-      const m = c as THREE.Mesh;
-      if (m.material) {
-        const std = (m.material as THREE.MeshStandardMaterial).clone();
-        m.material = std;
-        materials.push(std);
-      }
-    }
-  });
-
-  let mixer: THREE.AnimationMixer | null = null;
-  if (original.animations.size > 0) {
-    mixer = new THREE.AnimationMixer(root);
-  }
-
-  const boundingBox = new THREE.Box3().setFromObject(root);
-
-  const cloneObj: ModelObject = {
-    ...original,
-    id,
-    root,
-    boundingBox,
-    materials,
-    mixer,
-    addTo(p) { p.add(root); return cloneObj; },
-    remove() { if (root.parent) root.parent.remove(root); return cloneObj; },
-    update(dt) { if (mixer) mixer.update(dt); },
-  };
-
-  return cloneObj;
-}
-
-/**
- * Initializes a central Model Manager System (mirrors initAudio & initScene)
- */
-export function initModels(scene?: THREE.Scene, sysOptions: ModelSystemOptions = {}): ModelSystem {
-  const activeScene = scene || sysOptions.scene;
-  const registry = new Map<string, ModelObject>();
-
-  async function load(keyOrUrl: AssetKey | string, options: ModelOptions = {}): Promise<ModelObject> {
-    const obj = await createModelObject(keyOrUrl, options, activeScene);
-    registry.set(obj.id, obj);
-    return obj;
-  }
-
-  function update(dt: number): void {
-    for (const obj of registry.values()) {
-      obj.update(dt);
-    }
-  }
-
-  function get(id: string): ModelObject | undefined {
-    return registry.get(id);
-  }
-
-  function getAll(): ModelObject[] {
-    return Array.from(registry.values());
-  }
-
-  function remove(idOrObj: string | ModelObject): boolean {
-    const id = typeof idOrObj === "string" ? idOrObj : idOrObj.id;
-    const obj = registry.get(id);
-    if (obj) {
-      obj.destroy();
-      return registry.delete(id);
-    }
-    return false;
-  }
-
-  function clear(): void {
-    for (const obj of registry.values()) {
-      obj.destroy();
-    }
-    registry.clear();
-  }
-
-  return {
-    load,
-    create: load,
-    update,
-    get,
-    getAll,
-    remove,
-    clear,
-  };
-}

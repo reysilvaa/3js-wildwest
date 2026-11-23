@@ -164,7 +164,7 @@ export function initWeatherUI(handlers: WeatherUIHandlers): WeatherUI {
       id: "town-residents",
       label: "Town Residents",
       shortcut: "I",
-      getBadge: () => "5 CITIZENS",
+      getBadge: () => `${(window as unknown as { __npcs?: unknown[] }).__npcs?.length ?? 10} CITIZENS`,
       getDesc: () => "Inspect autonomous townsfolk navigating the boardwalks, saloon, and depot.",
       action: inspectNextNPC,
     },

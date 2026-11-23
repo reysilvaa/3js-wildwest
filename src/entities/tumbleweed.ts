@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { CollisionWorld } from "../core/collision.js";
 
 export interface TumbleweedOptions {
   modelUrl?: string;
@@ -55,7 +56,11 @@ export function initTumbleweeds(
     tumbleweeds.push(spawnTW(11, 28, -0.8, -5.6, baseRadius * 0.8, 2.0));
   });
 
-  function update(dt: number, buildingBoxes: THREE.Box3[]): void {
+  function update(dt: number, buildingBoxes?: THREE.Box3[]): void {
+    const boxes = buildingBoxes && buildingBoxes.length > 0
+      ? buildingBoxes
+      : CollisionWorld.getInstance().getBoxes();
+
     tumbleweeds.forEach((tw) => {
       let nextX = tw.x + tw.vx * dt;
       let nextZ = tw.z + tw.vz * dt;
@@ -68,8 +73,8 @@ export function initTumbleweeds(
         tw.vy = tw.bounce;
       }
 
-      for (let i = 0; i < buildingBoxes.length; i++) {
-        const box = buildingBoxes[i]!;
+      for (let i = 0; i < boxes.length; i++) {
+        const box = boxes[i]!;
         if (tw.y > box.max.y || tw.y + tw.r < box.min.y) continue;
 
         if (

@@ -78,47 +78,10 @@ export async function loadAsset(name: AssetKey): Promise<THREE.Group> {
   });
 }
 
-/**
- * Instantiates and places a modular asset at given coordinates
- */
-export async function instantiateAsset(
-  name: AssetKey,
-  pos: [number, number, number] = [0, 0, 0],
-  rotY = 0,
-  scale = 1
-): Promise<THREE.Group> {
-  const model = await loadAsset(name);
-  model.position.set(...pos);
-  model.rotation.y = rotY;
-  if (scale !== 1) model.scale.setScalar(scale);
-  return model;
-}
-
-/**
- * Creates an autonomous reusable Windmill entity with its own blade spin update
- */
-export async function createWindmill(
-  pos: [number, number, number] = [0, 0, 0],
-  rotY = 0
-): Promise<{ model: THREE.Group; update: (dt: number) => void }> {
-  const model = await instantiateAsset("windmill", pos, rotY);
-  const blades = model.getObjectByName("Cylinder005") || model.getObjectByName("Cylinder.005");
-
-  function update(dt: number) {
-    if (blades) {
-      blades.rotateY(1.2 * dt);
-    }
-  }
-
-  return { model, update };
-}
-
 export {
   createModelObject,
-  initModels,
   type ModelObject,
   type ModelOptions,
-  type ModelSystem,
-  type ModelSystemOptions,
 } from "../core/models.js";
+
 

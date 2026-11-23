@@ -57,30 +57,7 @@ export function initDesertGround(scene: THREE.Scene, options: GroundOptions = {}
   for (let i = 0; i < count; i++) {
     const x = posAttr.getX(i);
     const z = posAttr.getZ(i);
-
-    const dist = Math.hypot(x - tcX, z - tcZ);
-
-    if (dist < flatRadius) {
-      posAttr.setY(i, 0.0);
-    } else {
-      const t = Math.min(1, Math.max(0, (dist - flatRadius) / 70));
-      const blend = t * t * (3 - 2 * t);
-
-      const dunes =
-        Math.sin(x * 0.022 + z * 0.015) * 3.2 +
-        Math.cos(x * 0.012 - z * 0.018) * 2.6 +
-        Math.sin(dist * 0.018) * 1.5;
-
-      let mesa = 0;
-      if (dist > 220) {
-        const mesaNoise = Math.sin(x * 0.007) * Math.cos(z * 0.007);
-        if (mesaNoise > 0.35) {
-          mesa = Math.min(28, (mesaNoise - 0.35) * 60);
-        }
-      }
-
-      posAttr.setY(i, blend * (dunes + mesa));
-    }
+    posAttr.setY(i, getGroundHeightOnly(x, z, tcX, tcZ, flatRadius));
   }
 
   geo.computeVertexNormals();
