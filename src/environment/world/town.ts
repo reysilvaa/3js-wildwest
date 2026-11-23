@@ -189,6 +189,25 @@ export function loadWorld(
                   doorPivot.getWorldPosition(doorPos);
                   entryPos.y = getGroundHeightOnly(entryPos.x, entryPos.z);
 
+                  // Register raised boardwalk porch deck as walkable surface so NPCs step up cleanly
+                  const deckTopY = Math.max(entryPos.y, doorPos.y - 0.04);
+                  if (deckTopY > entryPos.y + 0.08) {
+                    const outDir = entryPos.clone().sub(doorPos);
+                    outDir.y = 0;
+                    if (outDir.lengthSq() > 0.01) outDir.normalize();
+                    const sideX = Math.abs(outDir.z) * 4.5 + Math.abs(outDir.x) * 1.4;
+                    const sideZ = Math.abs(outDir.x) * 4.5 + Math.abs(outDir.z) * 1.4;
+                    const porchCx = doorPos.x + outDir.x * 1.1;
+                    const porchCz = doorPos.z + outDir.z * 1.1;
+                    CollisionWorld.getInstance().addWalkableSurface({
+                      minX: porchCx - sideX,
+                      maxX: porchCx + sideX,
+                      minZ: porchCz - sideZ,
+                      maxZ: porchCz + sideZ,
+                      topY: deckTopY,
+                    });
+                  }
+
                   const roofPos = new THREE.Vector3(
                     (wholeBox.min.x + wholeBox.max.x) * 0.5,
                     wholeBox.max.y + 1.1,

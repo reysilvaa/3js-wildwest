@@ -7,11 +7,20 @@ export interface SeparableEntity {
   model?: { root: THREE.Object3D } | null;
 }
 
+export interface WalkableSurface {
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+  topY: number;
+}
+
 /**
- * Single Source of Truth (SSOT) Collision World for static obstacles and dynamic entity separation.
+ * Single Source of Truth (SSOT) Collision World for static obstacles, walkable decks, and dynamic entity separation.
  */
 export class CollisionWorld {
   private readonly staticBoxes: THREE.Box3[] = [];
+  private readonly walkableSurfaces: WalkableSurface[] = [];
   private static instance: CollisionWorld | null = null;
 
   public static getInstance(): CollisionWorld {
@@ -23,6 +32,24 @@ export class CollisionWorld {
 
   public addBox(box: THREE.Box3): void {
     this.staticBoxes.push(box);
+  }
+
+  public addWalkableSurface(surface: WalkableSurface): void {
+    this.walkableSurfaces.push(surface);
+  }
+
+  /**
+   * Returns highest walkable deck/porch surface height at (x, z), or baseGroundY if on sand. Zero allocations.
+   */
+  public getSurfaceHeight(x: number, z: number, baseGroundY: number): number {
+    let bestY = baseGroundY;
+    for (let i = 0; i < this.walkableSurfaces.length; i++) {
+      const s = this.walkableSurfaces[i]!;
+      if (x >= s.minX && x <= s.maxX && z >= s.minZ && z <= s.maxZ && s.topY > bestY) {
+        bestY = s.topY;
+      }
+    }
+    return bestY;
   }
 
   public addBoxes(boxes: THREE.Box3[]): void {
@@ -61,8 +88,9 @@ export class CollisionWorld {
   public checkPointCollision(pos: THREE.Vector3, radius = 0.46): boolean {
     const minX = pos.x - radius;
     const maxX = pos.x + radius;
-    const minY = pos.y + 0.1;
-    const maxY = pos.y + 1.55;
+    const stepHeight = 0.55; // Low steps/porches up to 0.55m are walkable, not blocking walls
+    const minY = pos.y + stepHeight;
+    const maxY = pos.y + 1.75;
     const minZ = pos.z - radius;
     const maxZ = pos.z + radius;
 

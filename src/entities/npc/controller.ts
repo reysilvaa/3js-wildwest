@@ -365,7 +365,9 @@ export class NPC implements NPCController {
         this.currentPos.x += this._tmpDir.x * step;
         this.currentPos.z += this._tmpDir.z * step;
       }
-      this.currentPos.y = getGroundElevation(this.currentPos.x, this.currentPos.z).height;
+      const baseY = getGroundElevation(this.currentPos.x, this.currentPos.z).height;
+      const targetY = this.collisionWorld.getSurfaceHeight(this.currentPos.x, this.currentPos.z, baseY);
+      this.currentPos.y += (targetY - this.currentPos.y) * Math.min(1, 14 * dt);
       this.model.root.position.copy(this.currentPos);
       this.fadeToAction("Walk", 0.15);
 
@@ -397,7 +399,7 @@ export class NPC implements NPCController {
         }
       }
       this.fadeToAction("Idle", 0.25);
-      this.syncPosition();
+      this.syncPosition(dt);
       return;
     }
 
@@ -501,7 +503,7 @@ export class NPC implements NPCController {
       }
     }
 
-    this.syncPosition();
+    this.syncPosition(dt);
   }
 
   private advanceToNextActivity(): void {
@@ -568,9 +570,10 @@ export class NPC implements NPCController {
     this.fadeToAction("Walk", 0.35);
   }
 
-  private syncPosition(): void {
-    const centerElev = getGroundElevation(this.currentPos.x, this.currentPos.z);
-    this.currentPos.y = centerElev.height;
+  private syncPosition(dt = 0.016): void {
+    const baseY = getGroundElevation(this.currentPos.x, this.currentPos.z).height;
+    const targetY = this.collisionWorld.getSurfaceHeight(this.currentPos.x, this.currentPos.z, baseY);
+    this.currentPos.y += (targetY - this.currentPos.y) * Math.min(1, 14 * dt);
     this.collisionWorld.resolvePenetration(this.currentPos, 0.46);
     if (this.model) {
       this.model.root.position.copy(this.currentPos);
