@@ -1,25 +1,27 @@
 import * as THREE from "three";
 import type { CollisionWorld, SeparableEntity } from "../../core/collision.js";
 
-const WHISKER_ANGLES = [
-  Math.PI / 4, -Math.PI / 4,
-  Math.PI / 2, -Math.PI / 2,
-  (3 * Math.PI) / 4, (-3 * Math.PI) / 4,
-];
+// 16-ray 360° Virtual Eyes (Context-Based Steering) — precomputed unit circle, zero per-frame allocations
+const NUM_RAYS = 16;
+const RAY_X = new Float32Array(NUM_RAYS);
+const RAY_Z = new Float32Array(NUM_RAYS);
+for (let i = 0; i < NUM_RAYS; i++) {
+  const angle = (i / NUM_RAYS) * Math.PI * 2;
+  RAY_X[i] = Math.sin(angle);
+  RAY_Z[i] = Math.cos(angle);
+}
 
 export class NPCNavigator {
   private readonly streetNodes: THREE.Vector3[] = [];
   private readonly pathQueue: THREE.Vector3[] = [];
-  private readonly yAxis = new THREE.Vector3(0, 1, 0);
   private currentDestination: THREE.Vector3 | null = null;
 
-  // Reusable scratch vectors — zero per-frame GC allocations
+  // Reusable scratch buffers — zero per-frame GC allocations
   private readonly _steerDir = new THREE.Vector3();
-  private readonly _avoid = new THREE.Vector3();
-  private readonly _toOther = new THREE.Vector3();
-  private readonly _right = new THREE.Vector3();
+  private readonly _prevDir = new THREE.Vector3(0, 0, 1);
   private readonly _probe = new THREE.Vector3();
-  private readonly _cand = new THREE.Vector3();
+  private readonly _interest = new Float32Array(NUM_RAYS);
+  private readonly _danger = new Float32Array(NUM_RAYS);
 
   public setStreetNodes(nodes: THREE.Vector3[]): void {
     this.streetNodes.length = 0;
@@ -102,11 +104,11 @@ export class NPCNavigator {
     }
 
     const activeWaypoint = this.pathQueue.length > 0 ? this.pathQueue[0]! : this.currentDestination!;
-    this._steerDir.subVectors(activeWaypoint, currentPos);
-    this._steerDir.y = 0;
-    const dist = this._steerDir.length();
+    const goalDx = activeWaypoint.x - currentPos.x;
+    const goalDz = activeWaypoint.z - currentPos.z;
+    const dist = Math.hypot(goalDx, goalDz);
 
-    const arrivalRadius = this.pathQueue.length <= 1 ? 0.9 : 0.8;
+    const arrivalRadius = this.pathQueue.length <= 1 ? 1.0 : 0.9;
     if (dist < arrivalRadius) {
       if (this.pathQueue.length > 0) this.pathQueue.shift();
       if (this.pathQueue.length === 0) {
@@ -115,60 +117,104 @@ export class NPCNavigator {
       }
     }
 
-    if (dist > 0.0001) this._steerDir.divideScalar(dist);
-    this._avoid.set(0, 0, 0);
+    const invDist = dist > 0.0001 ? 1 / dist : 0;
+    const gx = goalDx * invDist;
+    const gz = goalDz * invDist;
+
+    // 1. Build 16-ray Interest Map (goal alignment + smooth heading momentum)
+    const px = this._prevDir.x;
+    const pz = this._prevDir.z;
+    for (let i = 0; i < NUM_RAYS; i++) {
+      const rx = RAY_X[i]!;
+      const rz = RAY_Z[i]!;
+      const goalDot = rx * gx + rz * gz;
+      const momDot = rx * px + rz * pz;
+      this._interest[i] = Math.max(0, goalDot * 0.78 + momDot * 0.22 + 0.15);
+      this._danger[i] = 0;
+    }
+
+    // 2. Virtual Eyes — Static Obstacle Vision (near 0.85m, mid 1.7m, far 2.7m)
+    const probeY = currentPos.y;
+    for (let i = 0; i < NUM_RAYS; i++) {
+      const rx = RAY_X[i]!;
+      const rz = RAY_Z[i]!;
+      this._probe.set(currentPos.x + rx * 0.85, probeY, currentPos.z + rz * 0.85);
+      if (collisionWorld.checkPointCollision(this._probe, 0.44)) {
+        this._danger[i] = 1.0;
+        continue;
+      }
+      this._probe.set(currentPos.x + rx * 1.7, probeY, currentPos.z + rz * 1.7);
+      if (collisionWorld.checkPointCollision(this._probe, 0.44)) {
+        this._danger[i] = 0.65;
+        continue;
+      }
+      this._probe.set(currentPos.x + rx * 2.7, probeY, currentPos.z + rz * 2.7);
+      if (collisionWorld.checkPointCollision(this._probe, 0.44)) {
+        this._danger[i] = 0.28;
+      }
+    }
+
+    // 3. Virtual Eyes — Dynamic NPC Vision (4.2m sight range + right-hand passing bias)
     const visionRange = 4.2;
-
-    // 1. Pedestrian Right-Hand-Passing + Close-Range Personal Space Repulsion
-    for (let i = 0; i < otherEntities.length; i++) {
-      const other = otherEntities[i]!;
+    for (let j = 0; j < otherEntities.length; j++) {
+      const other = otherEntities[j]!;
       if (other.id === selfId || (other.isPaused && other.isPaused())) continue;
-
       const oPos = other.getPosition();
-      this._toOther.set(oPos.x - currentPos.x, 0, oPos.z - currentPos.z);
-      const distToOther = this._toOther.length();
-
-      if (distToOther < visionRange && distToOther > 0.01) {
-        this._toOther.divideScalar(distToOther);
-        const dot = this._steerDir.dot(this._toOther);
-        // Hard close-range repulsion (< 2.0m) from any angle prevents head-on collisions
-        if (distToOther < 2.0) {
-          const push = (2.0 - distToOther) / 2.0;
-          this._avoid.addScaledVector(this._toOther, -push * 4.5);
-        }
-        if (dot > 0.05) {
-          this._right.set(-this._steerDir.z, 0, this._steerDir.x);
-          const steerSign = this._toOther.dot(this._right) > 0 ? -1 : 1;
-          const urgency = (visionRange - distToOther) / visionRange;
-          this._avoid.addScaledVector(this._right, steerSign * urgency * 4.0);
+      const ox = oPos.x - currentPos.x;
+      const oz = oPos.z - currentPos.z;
+      const d = Math.hypot(ox, oz);
+      if (d < visionRange && d > 0.01) {
+        const nx = ox / d;
+        const nz = oz / d;
+        const weight = d < 1.8 ? 1.0 : (visionRange - d) / visionRange;
+        for (let i = 0; i < NUM_RAYS; i++) {
+          const align = RAY_X[i]! * nx + RAY_Z[i]! * nz;
+          if (align > 0.2) {
+            const dScore = align * weight * (d < 1.8 ? 1.15 : 0.75);
+            if (dScore > this._danger[i]!) this._danger[i] = Math.min(1.0, dScore);
+          }
         }
       }
     }
 
-    if (this._avoid.lengthSq() > 0.01) {
-      this._steerDir.add(this._avoid).normalize();
-    }
-
-    // 2. Multi-Whisker Environment Sensor (zero allocations)
-    this._probe.copy(currentPos).addScaledVector(this._steerDir, 2.2);
-    let centerBlocked = collisionWorld.checkPointCollision(this._probe, 0.46);
-    if (!centerBlocked) {
-      this._probe.copy(currentPos).addScaledVector(this._steerDir, 1.1);
-      centerBlocked = collisionWorld.checkPointCollision(this._probe, 0.46);
-    }
-
-    if (centerBlocked) {
-      for (let i = 0; i < WHISKER_ANGLES.length; i++) {
-        this._cand.copy(this._steerDir).applyAxisAngle(this.yAxis, WHISKER_ANGLES[i]!);
-        this._probe.copy(currentPos).addScaledVector(this._cand, 1.6);
-        if (!collisionWorld.checkPointCollision(this._probe, 0.46)) {
-          this._steerDir.copy(this._cand);
-          break;
-        }
+    // 4. Pick best safe direction (weighted blend of top unobstructed rays)
+    let bestIdx = -1;
+    let bestScore = -1;
+    for (let i = 0; i < NUM_RAYS; i++) {
+      if (this._danger[i]! >= 0.95) continue;
+      const score = this._interest[i]! * (1.0 - this._danger[i]! * 0.85);
+      if (score > bestScore) {
+        bestScore = score;
+        bestIdx = i;
       }
     }
 
-    return { steerDir: this._steerDir, isArrived: false, isBlocked: centerBlocked };
+    if (bestIdx === -1) {
+      // Completely surrounded — signal blocked so controller reroutes
+      this._steerDir.set(-gx, 0, -gz);
+      return { steerDir: this._steerDir, isArrived: false, isBlocked: true };
+    }
+
+    // Smooth blend with immediate safe neighbors to avoid jagged 22.5° snapping
+    let sx = 0;
+    let sz = 0;
+    for (let offset = -1; offset <= 1; offset++) {
+      const idx = (bestIdx + offset + NUM_RAYS) % NUM_RAYS;
+      if (this._danger[idx]! >= 0.95) continue;
+      const w = (offset === 0 ? 1.0 : 0.45) * Math.max(0.05, this._interest[idx]! * (1.0 - this._danger[idx]! * 0.85));
+      sx += RAY_X[idx]! * w;
+      sz += RAY_Z[idx]! * w;
+    }
+
+    const sLen = Math.hypot(sx, sz);
+    if (sLen > 0.001) {
+      this._steerDir.set(sx / sLen, 0, sz / sLen);
+    } else {
+      this._steerDir.set(RAY_X[bestIdx]!, 0, RAY_Z[bestIdx]!);
+    }
+    this._prevDir.lerp(this._steerDir, 0.35).normalize();
+
+    return { steerDir: this._steerDir, isArrived: false, isBlocked: false };
   }
 
   public hasWaypoints(): boolean {

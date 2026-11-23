@@ -169,63 +169,70 @@ export function loadWorld(
           if (isSolid) {
             const wholeBox = new THREE.Box3().setFromObject(model);
             if (wholeBox.max.y - wholeBox.min.y > 0.25) {
+              const doorPivot = isBuilding ? model.getObjectByName("DoorPivot") : null;
+              const doorEntry = isBuilding ? model.getObjectByName("DoorEntry") : null;
+
               if (isBuilding) {
-                // Keep outer boardwalk & door entry clear while solid building core blocks NPCs
-                wholeBox.min.x += 0.75;
-                wholeBox.max.x -= 0.75;
-                wholeBox.min.z += 0.75;
-                wholeBox.max.z -= 0.75;
+                wholeBox.min.x += 0.5;
+                wholeBox.max.x -= 0.5;
+                wholeBox.min.z += 0.5;
+                wholeBox.max.z -= 0.5;
               }
-              buildingBoxes.push(wholeBox);
-              CollisionWorld.getInstance().addBox(wholeBox);
 
-              if (isBuilding) {
-                const doorPivot = model.getObjectByName("DoorPivot");
-                const doorEntry = model.getObjectByName("DoorEntry");
-                if (doorPivot && doorEntry) {
-                  const entryPos = new THREE.Vector3();
-                  const doorPos = new THREE.Vector3();
-                  doorEntry.getWorldPosition(entryPos);
-                  doorPivot.getWorldPosition(doorPos);
-                  entryPos.y = getGroundHeightOnly(entryPos.x, entryPos.z);
+              if (isBuilding && doorPivot && doorEntry) {
+                const entryPos = new THREE.Vector3();
+                const doorPos = new THREE.Vector3();
+                doorEntry.getWorldPosition(entryPos);
+                doorPivot.getWorldPosition(doorPos);
+                entryPos.y = getGroundHeightOnly(entryPos.x, entryPos.z);
 
-                  // Register raised boardwalk porch deck as walkable surface so NPCs step up cleanly
-                  const deckTopY = Math.max(entryPos.y, doorPos.y - 0.04);
-                  if (deckTopY > entryPos.y + 0.08) {
-                    const outDir = entryPos.clone().sub(doorPos);
-                    outDir.y = 0;
-                    if (outDir.lengthSq() > 0.01) outDir.normalize();
-                    const sideX = Math.abs(outDir.z) * 4.5 + Math.abs(outDir.x) * 1.4;
-                    const sideZ = Math.abs(outDir.x) * 4.5 + Math.abs(outDir.z) * 1.4;
-                    const porchCx = doorPos.x + outDir.x * 1.1;
-                    const porchCz = doorPos.z + outDir.z * 1.1;
-                    CollisionWorld.getInstance().addWalkableSurface({
-                      minX: porchCx - sideX,
-                      maxX: porchCx + sideX,
-                      minZ: porchCz - sideZ,
-                      maxZ: porchCz + sideZ,
-                      topY: deckTopY,
-                    });
-                  }
+                const outDir = entryPos.clone().sub(doorPos);
+                outDir.y = 0;
+                if (outDir.lengthSq() > 0.01) {
+                  outDir.normalize();
+                  // Trim solid wall box flush behind the door wall so the ENTIRE front porch is 100% free & walkable!
+                  if (outDir.x > 0.5) wholeBox.max.x = Math.min(wholeBox.max.x, doorPos.x - 0.2);
+                  else if (outDir.x < -0.5) wholeBox.min.x = Math.max(wholeBox.min.x, doorPos.x + 0.2);
+                  if (outDir.z > 0.5) wholeBox.max.z = Math.min(wholeBox.max.z, doorPos.z - 0.2);
+                  else if (outDir.z < -0.5) wholeBox.min.z = Math.max(wholeBox.min.z, doorPos.z + 0.2);
 
-                  const roofPos = new THREE.Vector3(
-                    (wholeBox.min.x + wholeBox.max.x) * 0.5,
-                    wholeBox.max.y + 1.1,
-                    (wholeBox.min.z + wholeBox.max.z) * 0.5
-                  );
-                  buildings.push({
-                    id: inst.name ?? `${inst.asset}_${buildings.length}`,
-                    label: inst.asset.toUpperCase(),
-                    entryPos,
-                    doorPos,
-                    roofPos,
-                    doorPivot,
-                    occupants: [],
-                    openTimer: 0,
-                    openAngle: 0,
+                  // Register raised boardwalk porch deck strictly over the physical wooden planks (0..1.75m from wall)
+                  const deckTopY = entryPos.y + 0.42;
+                  const halfDepth = 0.85;
+                  const halfWidth = 3.9;
+                  const sideX = Math.abs(outDir.z) * halfWidth + Math.abs(outDir.x) * halfDepth;
+                  const sideZ = Math.abs(outDir.x) * halfWidth + Math.abs(outDir.z) * halfDepth;
+                  const porchCx = doorPos.x + outDir.x * 0.90;
+                  const porchCz = doorPos.z + outDir.z * 0.90;
+                  CollisionWorld.getInstance().addWalkableSurface({
+                    minX: porchCx - sideX,
+                    maxX: porchCx + sideX,
+                    minZ: porchCz - sideZ,
+                    maxZ: porchCz + sideZ,
+                    topY: deckTopY,
                   });
                 }
+
+                const roofPos = new THREE.Vector3(
+                  (wholeBox.min.x + wholeBox.max.x) * 0.5,
+                  wholeBox.max.y + 1.1,
+                  (wholeBox.min.z + wholeBox.max.z) * 0.5
+                );
+                buildings.push({
+                  id: inst.name ?? `${inst.asset}_${buildings.length}`,
+                  label: inst.asset.toUpperCase(),
+                  entryPos,
+                  doorPos,
+                  roofPos,
+                  doorPivot,
+                  occupants: [],
+                  openTimer: 0,
+                  openAngle: 0,
+                });
               }
+
+              buildingBoxes.push(wholeBox);
+              CollisionWorld.getInstance().addBox(wholeBox);
             }
           }
 

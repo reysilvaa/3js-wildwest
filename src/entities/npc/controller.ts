@@ -341,7 +341,7 @@ export class NPC implements NPCController {
         }
         this.model.root.visible = true;
         this.state = "EXITING";
-        this.stateTimer = 2.6;
+        this.stateTimer = 1.1; // Step ~1.2m onto porch, then hand over to 16-ray Virtual Eyes
         this.fadeToAction("Walk", 0.15);
       }
       return;
