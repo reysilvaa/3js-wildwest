@@ -1,7 +1,13 @@
 import * as THREE from "three";
-import { GLTFLoader, type GLTF } from "three/addons/loaders/GLTFLoader.js";
 import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
-import type { ModelObject } from "../../core/models.js";
+import { getModelsManifest, loadGLTF } from "../../environment/assets.js";
+
+export interface NPCModel {
+  readonly root: THREE.Group;
+  readonly mixer: THREE.AnimationMixer;
+  readonly animations: Map<string, THREE.AnimationClip>;
+  update: (dt: number) => void;
+}
 
 export interface ModularPartsConfig {
   modelUrl?: string;
@@ -56,62 +62,26 @@ export const WESTERN_HAT_PALETTE = [
 
 const pickRandom = <T>(arr: readonly T[]): T => arr[Math.floor(Math.random() * arr.length)]!;
 
-export const NPC_ASSET_COUNTS = {
-  characters: 3,
-  hats: 1,
-  holsters: 2,
-} as const;
-
-const pad3 = (n: number) => String(n).padStart(3, "0");
-
-export const NPC_MODELS: readonly string[] = Array.from(
-  { length: NPC_ASSET_COUNTS.characters },
-  (_, i) => `/models/npc/characters/npc_${pad3(i + 1)}.glb`
-);
-
-export const MODULAR_HATS: readonly string[] = Array.from(
-  { length: NPC_ASSET_COUNTS.hats },
-  (_, i) => `/models/npc/modular/accessories/hat/hat_${pad3(i + 1)}.glb`
-);
-
-export const MODULAR_HOLSTERS: readonly string[] = Array.from(
-  { length: NPC_ASSET_COUNTS.holsters },
-  (_, i) => `/models/npc/modular/accessories/holster/holster_${pad3(i + 1)}.glb`
-);
-
-export function getNPCModelByIndex(index: number): string {
-  return NPC_MODELS[Math.abs(index) % NPC_MODELS.length]!;
+export async function getRandomHatUrl(): Promise<string> {
+  const { npc } = await getModelsManifest();
+  return npc.hats.length > 0 ? pickRandom(npc.hats) : "";
 }
 
-export function getRandomHatUrl(): string {
-  return MODULAR_HATS[Math.floor(Math.random() * MODULAR_HATS.length)]!;
-}
-
-const gltfCache = new Map<string, Promise<GLTF>>();
-
-function loadCachedGLTF(url: string, loader: GLTFLoader): Promise<GLTF> {
-  let promise = gltfCache.get(url);
-  if (!promise) {
-    promise = loader.loadAsync(url).catch((err) => {
-      gltfCache.delete(url);
-      throw err;
-    });
-    gltfCache.set(url, promise);
-  }
-  return promise;
-}
-
-export function getRandomModularConfig(): Required<ModularPartsConfig> {
-  const modelUrl = pickRandom(NPC_MODELS);
+export async function getRandomModularConfig(modelIndex?: number): Promise<Required<ModularPartsConfig>> {
+  const { npc } = await getModelsManifest();
+  const modelUrl =
+    modelIndex !== undefined && npc.characters.length > 0
+      ? npc.characters[Math.abs(modelIndex) % npc.characters.length]!
+      : pickRandom(npc.characters);
   const outfitColor = pickRandom(WESTERN_OUTFIT_PALETTE);
   const pantsColor = pickRandom(WESTERN_PANTS_PALETTE);
   const bootsColor = pickRandom(WESTERN_LEATHER_PALETTE);
   const hatColor = pickRandom(WESTERN_HAT_PALETTE);
   const holsterColor = pickRandom(WESTERN_LEATHER_PALETTE);
-  const wearsHat = Math.random() < 0.70;
-  const accessoryUrl = wearsHat ? getRandomHatUrl() : "";
-  const wearsHolster = Math.random() < 0.80;
-  const holsterUrl = wearsHolster ? pickRandom(MODULAR_HOLSTERS) : "";
+  const wearsHat = npc.hats.length > 0 && Math.random() < 0.70;
+  const accessoryUrl = wearsHat ? pickRandom(npc.hats) : "";
+  const wearsHolster = npc.holsters.length > 0 && Math.random() < 0.80;
+  const holsterUrl = wearsHolster ? pickRandom(npc.holsters) : "";
 
   return {
     modelUrl,
@@ -139,12 +109,11 @@ export interface ModularModelOptions {
 export async function assembleModularCharacter(
   config: ModularPartsConfig = {},
   options: ModularModelOptions = {},
-  parentScene?: THREE.Object3D,
-  loader = new GLTFLoader()
-): Promise<ModelObject> {
-  const modelUrl = config.modelUrl || NPC_MODELS[0]!;
+  parentScene?: THREE.Object3D
+): Promise<NPCModel> {
+  const modelUrl = config.modelUrl || (await getModelsManifest()).npc.characters[0]!;
 
-  const baseGltf = await loadCachedGLTF(modelUrl, loader);
+  const baseGltf = await loadGLTF(modelUrl);
   // SAFETY: Three.js SkeletonUtils.clone preserves skinning and hierarchy
   const root = SkeletonUtils.clone(baseGltf.scene) as THREE.Group;
 
@@ -180,7 +149,7 @@ export async function assembleModularCharacter(
   const attachSocketProp = async (url: string, boneName: string, tintColor?: number | THREE.Color) => {
     if (!url || !skeleton) return;
     try {
-      const propGltf = await loadCachedGLTF(url, loader);
+      const propGltf = await loadGLTF(url);
       const cloned = SkeletonUtils.clone(propGltf.scene);
 
       cloned.traverse((child) => {
@@ -358,198 +327,13 @@ export async function assembleModularCharacter(
 
   const mixer = new THREE.AnimationMixer(root);
   const animations = new Map<string, THREE.AnimationClip>();
-  if (baseGltf.animations) {
-    for (const clip of baseGltf.animations) {
-      clip.tracks = clip.tracks.filter((t: THREE.KeyframeTrack) => {
-        const lower = t.name.toLowerCase();
-        return (
-          !lower.includes("thumb") &&
-          !lower.includes("index") &&
-          !lower.includes("middle") &&
-          !lower.includes("ring") &&
-          !lower.includes("pinky") &&
-          !lower.includes("forearm1") &&
-          !lower.includes("forearm2")
-        );
-      });
-      animations.set(clip.name, clip);
-      const lower = clip.name.toLowerCase();
-      if (lower.startsWith("idle") && !animations.has("Idle")) {
-        animations.set("Idle", clip);
-      } else if (lower.startsWith("wave") && !animations.has("Wave")) {
-        animations.set("Wave", clip);
-      }
-    }
-  }
-  const boundingBox = new THREE.Box3().setFromObject(root);
 
-  const modelObj: ModelObject = {
-    id: `modular_npc_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-    name: "ModularNPC",
+  return {
     root,
-    boundingBox,
-    materials,
-    animations,
     mixer,
-    setPosition(x: number, y: number, z: number) {
-      root.position.set(x, y, z);
-      boundingBox.setFromObject(root);
-      return modelObj;
-    },
-    setRotation(x: number, y: number, z: number) {
-      root.rotation.set(x, y, z);
-      boundingBox.setFromObject(root);
-      return modelObj;
-    },
-    setQuaternion(x: number, y: number, z: number, w: number) {
-      root.quaternion.set(x, y, z, w);
-      boundingBox.setFromObject(root);
-      return modelObj;
-    },
-    setScale(s: number | [number, number, number]) {
-      if (typeof s === "number") root.scale.setScalar(s);
-      else root.scale.set(...s);
-      boundingBox.setFromObject(root);
-      return modelObj;
-    },
-    setShadows(cast?: boolean, receive?: boolean) {
-      root.traverse((c) => {
-        if ((c as THREE.Mesh).isMesh) {
-          if (cast !== undefined) c.castShadow = cast;
-          if (receive !== undefined) c.receiveShadow = receive;
-        }
-      });
-      return modelObj;
-    },
-    setEmissive(color: number | THREE.Color, intensity?: number) {
-      const c = typeof color === "number" ? new THREE.Color(color) : color;
-      for (const m of materials) {
-        m.emissive.copy(c);
-        if (intensity !== undefined) m.emissiveIntensity = intensity;
-      }
-      return modelObj;
-    },
-    setRoughness(roughness: number) {
-      for (const m of materials) m.roughness = roughness;
-      return modelObj;
-    },
-    setMetalness(metalness: number) {
-      for (const m of materials) m.metalness = metalness;
-      return modelObj;
-    },
-    setOpacity(opacity: number) {
-      for (const m of materials) {
-        m.transparent = opacity < 1;
-        m.opacity = opacity;
-      }
-      return modelObj;
-    },
-    addTo(scene: THREE.Object3D) {
-      scene.add(root);
-      return modelObj;
-    },
-    remove() {
-      if (root.parent) root.parent.remove(root);
-      return modelObj;
-    },
+    animations,
     update(dt: number) {
       mixer.update(dt);
     },
-    getChild(name: string) {
-      return root.getObjectByName(name) || null;
-    },
-    getMesh(name: string) {
-      const obj = root.getObjectByName(name);
-      return (obj && (obj as THREE.Mesh).isMesh) ? (obj as THREE.Mesh) : null;
-    },
-    getCenter(target = new THREE.Vector3()) {
-      boundingBox.setFromObject(root);
-      return boundingBox.getCenter(target);
-    },
-    getSize(target = new THREE.Vector3()) {
-      boundingBox.setFromObject(root);
-      return boundingBox.getSize(target);
-    },
-    playAnimation(name = "Walk", loop = true) {
-      let clip = animations.get(name);
-      if (!clip && animations.size > 0) {
-        clip = animations.values().next().value;
-      }
-      if (!clip) return null;
-      const action = mixer.clipAction(clip);
-      action.setLoop(loop ? THREE.LoopRepeat : THREE.LoopOnce, loop ? Infinity : 1);
-      action.clampWhenFinished = !loop;
-      action.reset().play();
-      return action;
-    },
-    stopAnimations() {
-      mixer.stopAllAction();
-      return modelObj;
-    },
-    clone(_newId?: string) {
-      return modelObj;
-    },
-    destroy() {
-      modelObj.remove();
-      mixer.stopAllAction();
-      root.traverse((c) => {
-        if ((c as THREE.Mesh).isMesh) {
-          const m = c as THREE.Mesh;
-          if (m.geometry) m.geometry.dispose();
-          if (Array.isArray(m.material)) m.material.forEach((mat) => mat.dispose());
-          else if (m.material) m.material.dispose();
-        }
-      });
-    },
   };
-
-  return modelObj;
-}
-
-export interface NodeInspectionRecord {
-  name: string;
-  type: string;
-  isSkinnedMesh: boolean;
-  bonesCount: number;
-  materials: string;
-  hasTexture: boolean;
-  visible: boolean;
-  vertsCount: number;
-}
-
-/**
- * Diagnostic helper: logs complete node hierarchy, skeleton binding, and materials of an NPC.
- */
-export function inspectNPC(target: THREE.Object3D | ModelObject): NodeInspectionRecord[] {
-  const root = (target as ModelObject).root ?? (target as THREE.Object3D);
-  const records: NodeInspectionRecord[] = [];
-
-  root.traverse((child) => {
-    const isMesh = (child as THREE.Mesh).isMesh;
-    const isSkinned = (child as THREE.SkinnedMesh).isSkinnedMesh;
-    const sm = child as THREE.SkinnedMesh;
-    const m = child as THREE.Mesh;
-
-    let matNames = "none";
-    let hasMap = false;
-    if (isMesh && m.material) {
-      const mats = Array.isArray(m.material) ? m.material : [m.material];
-      matNames = mats.map((mt) => mt.name || "unnamed").join(", ");
-      hasMap = mats.some((mt) => !!(mt as THREE.MeshStandardMaterial).map);
-    }
-
-    records.push({
-      name: child.name || "(anonymous)",
-      type: child.type,
-      isSkinnedMesh: !!isSkinned,
-      bonesCount: isSkinned && sm.skeleton ? sm.skeleton.bones.length : 0,
-      materials: matNames,
-      hasTexture: hasMap,
-      visible: child.visible,
-      vertsCount: isMesh && m.geometry ? (m.geometry.attributes["position"]?.count ?? 0) : 0,
-    });
-  });
-
-  console.table(records);
-  return records;
 }

@@ -1,11 +1,9 @@
 import * as THREE from "three";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { createModelObject, type ModelObject } from "../../core/models.js";
-import { assembleModularCharacter, getNPCModelByIndex, getRandomHatUrl, getRandomModularConfig } from "./modular.js";
+import { assembleModularCharacter, getRandomHatUrl, getRandomModularConfig, type NPCModel } from "./modular.js";
 import { getGroundElevation } from "../../environment/terrain/height.js";
-import { CollisionWorld, type ICollisionWorld, type SeparableEntity } from "../../core/collision.js";
-import { NPCNavigator, type INPCNavigator } from "./navigator.js";
-import type { AssetKey } from "../../environment/assets.js";
+import { CollisionWorld, type SeparableEntity } from "../../core/collision.js";
+import { NPCNavigator } from "./navigator.js";
+import { getModelsManifest, loadGLTF } from "../../environment/assets.js";
 
 export type NPCState = "IDLE" | "WALK" | "GREET" | "ACTIVITY";
 
@@ -19,10 +17,8 @@ export interface TownActivity {
 
 export interface NPCOptions {
   name?: string;
-  modelKey?: AssetKey;
   modelUrl?: string;
   modelIndex?: number;
-  useModular?: boolean;
   modularAccessory?: "cowboy_hat" | "none" | "random";
   outfitColor?: number | THREE.Color;
   initialPos?: [number, number, number];
@@ -40,7 +36,7 @@ export interface NPCOptions {
 
 export interface NPCController extends SeparableEntity {
   name: string;
-  model: ModelObject | null;
+  model: NPCModel | null;
   update: (dt: number) => void;
   getState: () => NPCState;
   getCurrentActivity: () => string;
@@ -81,24 +77,51 @@ function filterTracks(clip: THREE.AnimationClip): THREE.AnimationClip {
   return cloned;
 }
 
+interface NPCDataPayload {
+  streetNodes?: [number, number, number][];
+  activities?: { name: string; description: string; spot: [number, number, number]; facingAngle: number; duration: number }[];
+}
+
+const npcDataCache = new Map<string, Promise<NPCDataPayload | null>>();
+
+function loadNPCData(url: string): Promise<NPCDataPayload | null> {
+  let promise = npcDataCache.get(url);
+  if (!promise) {
+    promise = fetch(url)
+      .then((res) => (res.ok ? (res.json() as Promise<NPCDataPayload>) : null))
+      .catch((err) => {
+        console.warn("[NPC] Failed to load npc_data:", err);
+        return null;
+      });
+    npcDataCache.set(url, promise);
+  }
+  return promise;
+}
+
 async function getSharedNPCAnimations(
-  loader = new GLTFLoader(),
-  walkUrl = "/models/movement/walk.glb",
-  idleUrl = "/models/movement/idle.glb"
+  walkUrl?: string,
+  idleUrl?: string
 ): Promise<Map<string, THREE.AnimationClip>> {
   if (sharedAnimCachePromise) return sharedAnimCachePromise;
 
   sharedAnimCachePromise = (async () => {
+    const { animations } = await getModelsManifest();
+    const resolvedIdle = idleUrl ?? animations.idle;
+    const resolvedWalk = walkUrl ?? animations.walk;
     const map = new Map<string, THREE.AnimationClip>();
     const [idleGltf, walkGltf] = await Promise.all([
-      loader.loadAsync(idleUrl).catch((err) => {
-        console.warn("[NPC] Failed to load idle animation:", err);
-        return null;
-      }),
-      loader.loadAsync(walkUrl).catch((err) => {
-        console.warn("[NPC] Failed to load walk animation:", err);
-        return null;
-      }),
+      resolvedIdle
+        ? loadGLTF(resolvedIdle).catch((err) => {
+            console.warn("[NPC] Failed to load idle animation:", err);
+            return null;
+          })
+        : Promise.resolve(null),
+      resolvedWalk
+        ? loadGLTF(resolvedWalk).catch((err) => {
+            console.warn("[NPC] Failed to load walk animation:", err);
+            return null;
+          })
+        : Promise.resolve(null),
     ]);
 
     if (idleGltf?.animations) {
@@ -124,7 +147,7 @@ async function getSharedNPCAnimations(
 export class NPC implements NPCController {
   public readonly id: string;
   public readonly name: string;
-  public model: ModelObject | null = null;
+  public model: NPCModel | null = null;
 
   private state: NPCState = "ACTIVITY";
   private stateTimer = 3.0;
@@ -140,16 +163,18 @@ export class NPC implements NPCController {
   private readonly currentPos: THREE.Vector3;
   private readonly targetRotation = new THREE.Quaternion();
   private readonly yAxis = new THREE.Vector3(0, 1, 0);
+  private readonly _tmpDir = new THREE.Vector3();
+  private readonly _tmpNext = new THREE.Vector3();
 
-  private readonly navigator: INPCNavigator;
-  private readonly collisionWorld: ICollisionWorld;
+  private readonly navigator: NPCNavigator;
+  private readonly collisionWorld: CollisionWorld;
   private readonly options: NPCOptions;
   private readonly otherNPCsRef: () => NPCController[];
 
   constructor(
     options: NPCOptions,
-    collisionWorld: ICollisionWorld = CollisionWorld.getInstance(),
-    navigator: INPCNavigator = new NPCNavigator(),
+    collisionWorld: CollisionWorld = CollisionWorld.getInstance(),
+    navigator: NPCNavigator = new NPCNavigator(),
     otherNPCsRef: () => NPCController[] = () => []
   ) {
     this.options = options;
@@ -165,88 +190,72 @@ export class NPC implements NPCController {
   }
 
   private async initActivitiesAndNodes(): Promise<void> {
-    const dataUrl = this.options.dataUrl ?? "/models/npc_data.json";
-    try {
-      const res = await fetch(dataUrl);
-      if (!res.ok) return;
-      const data = await res.json();
+    const data = await loadNPCData(this.options.dataUrl ?? "/models/npc_data.json");
+    if (!data) return;
 
-      if (Array.isArray(data.streetNodes)) {
-        const nodes = data.streetNodes.map((n: [number, number, number]) => new THREE.Vector3(...n));
-        this.navigator.setStreetNodes(nodes);
-      }
+    if (Array.isArray(data.streetNodes)) {
+      const nodes = data.streetNodes.map((n) => new THREE.Vector3(...n));
+      this.navigator.setStreetNodes(nodes);
+    }
 
-      if (Array.isArray(data.activities) && data.activities.length > 0) {
-        this.activities.length = 0;
-        for (const a of data.activities) {
-          this.activities.push({
-            name: a.name,
-            description: a.description,
-            spot: new THREE.Vector3(...a.spot),
-            facingAngle: a.facingAngle,
-            duration: a.duration,
-          });
-        }
-        const initialIdx = Math.min(this.currentActivityIndex, this.activities.length - 1);
-        this.currentActivityIndex = initialIdx;
-        const curSpot = this.activities[initialIdx]?.spot;
-        if (curSpot && !this.options.stationary) {
-          this.navigator.planPath(this.currentPos, curSpot);
-        }
+    if (Array.isArray(data.activities) && data.activities.length > 0) {
+      this.activities.length = 0;
+      for (const a of data.activities) {
+        this.activities.push({
+          name: a.name,
+          description: a.description,
+          spot: new THREE.Vector3(...a.spot),
+          facingAngle: a.facingAngle,
+          duration: a.duration,
+        });
       }
-    } catch (err) {
-      console.warn(`[NPC ${this.name}] Failed to load activities:`, err);
+      const initialIdx = Math.min(this.currentActivityIndex, this.activities.length - 1);
+      this.currentActivityIndex = initialIdx;
+      const curSpot = this.activities[initialIdx]?.spot;
+      if (curSpot && !this.options.stationary) {
+        this.navigator.planPath(this.currentPos, curSpot);
+      }
     }
   }
 
-  public async loadModel(scene: THREE.Scene): Promise<ModelObject> {
+  public async loadModel(scene: THREE.Scene): Promise<NPCModel> {
     const scale = this.options.scale ?? 0.85;
-    const randConfig = getRandomModularConfig();
+    const randConfig = await getRandomModularConfig(this.options.modelIndex);
 
     let accessoryUrl = randConfig.accessoryUrl;
     if (this.options.modularAccessory === "cowboy_hat") {
-      accessoryUrl = getRandomHatUrl();
+      accessoryUrl = await getRandomHatUrl();
     } else if (this.options.modularAccessory === "none") {
       accessoryUrl = "";
     }
 
     const finalColor = this.options.outfitColor ?? randConfig.outfitColor;
-    const resolvedModelUrl =
-      this.options.modelUrl ??
-      (this.options.modelIndex !== undefined
-        ? getNPCModelByIndex(this.options.modelIndex)
-        : randConfig.modelUrl);
+    const resolvedModelUrl = this.options.modelUrl ?? randConfig.modelUrl;
 
-    const modelObj = (this.options.useModular ?? true) || !this.options.modelKey
-      ? await assembleModularCharacter({
-          modelUrl: resolvedModelUrl,
-          accessoryUrl,
-          holsterUrl: randConfig.holsterUrl,
-          outfitColor: finalColor,
-          pantsColor: randConfig.pantsColor,
-          bootsColor: randConfig.bootsColor,
-          hatColor: randConfig.hatColor,
-          holsterColor: randConfig.holsterColor,
-        }, {
-          position: this.currentPos,
-          scale,
-          castShadow: true,
-          receiveShadow: true,
-        }, scene)
-      : await createModelObject(
-          this.options.modelKey!,
-          { position: this.currentPos, scale, castShadow: true, receiveShadow: true },
-          scene
-        );
+    const modelObj = await assembleModularCharacter(
+      {
+        modelUrl: resolvedModelUrl,
+        accessoryUrl,
+        holsterUrl: randConfig.holsterUrl,
+        outfitColor: finalColor,
+        pantsColor: randConfig.pantsColor,
+        bootsColor: randConfig.bootsColor,
+        hatColor: randConfig.hatColor,
+        holsterColor: randConfig.holsterColor,
+      },
+      {
+        position: this.currentPos,
+        scale,
+        castShadow: true,
+        receiveShadow: true,
+      },
+      scene
+    );
 
     this.model = modelObj;
 
-    const gltfLoader = new GLTFLoader();
-    const walkUrl = this.options.walkAnimUrl ?? "/models/movement/walk.glb";
-    const idleUrl = this.options.idleAnimUrl ?? "/models/movement/idle.glb";
-
     try {
-      const animMap = await getSharedNPCAnimations(gltfLoader, walkUrl, idleUrl);
+      const animMap = await getSharedNPCAnimations(this.options.walkAnimUrl, this.options.idleAnimUrl);
       for (const [name, clip] of animMap) {
         modelObj.animations.set(name, clip.clone());
       }
@@ -303,11 +312,10 @@ export class NPC implements NPCController {
       this.pauseTimer -= dt;
       if (this.faceTimer > 0 && this.forcedFaceTarget) {
         this.faceTimer -= dt;
-        const dir = this.forcedFaceTarget.clone().sub(this.currentPos);
-        dir.y = 0;
-        if (dir.lengthSq() > 0.01) {
-          const targetAngle = Math.atan2(dir.x, dir.z);
-          this.targetRotation.setFromAxisAngle(this.yAxis, targetAngle);
+        this._tmpDir.subVectors(this.forcedFaceTarget, this.currentPos);
+        this._tmpDir.y = 0;
+        if (this._tmpDir.lengthSq() > 0.01) {
+          this.targetRotation.setFromAxisAngle(this.yAxis, Math.atan2(this._tmpDir.x, this._tmpDir.z));
           this.model.root.quaternion.slerp(this.targetRotation, Math.min(1, 6 * dt));
         }
       }
@@ -321,11 +329,10 @@ export class NPC implements NPCController {
 
     if (this.options.stationary) {
       if (playerNearby && camera) {
-        const dir = camera.position.clone().sub(this.currentPos);
-        dir.y = 0;
-        if (dir.lengthSq() > 0.01) {
-          const targetAngle = Math.atan2(dir.x, dir.z);
-          this.targetRotation.setFromAxisAngle(this.yAxis, targetAngle);
+        this._tmpDir.subVectors(camera.position, this.currentPos);
+        this._tmpDir.y = 0;
+        if (this._tmpDir.lengthSq() > 0.01) {
+          this.targetRotation.setFromAxisAngle(this.yAxis, Math.atan2(this._tmpDir.x, this._tmpDir.z));
           this.model.root.quaternion.slerp(this.targetRotation, Math.min(1, 5 * dt));
         }
       }
@@ -341,11 +348,10 @@ export class NPC implements NPCController {
     if (this.state === "GREET") {
       this.stateTimer -= dt;
       if (camera) {
-        const dir = camera.position.clone().sub(this.currentPos);
-        dir.y = 0;
-        if (dir.lengthSq() > 0.01) {
-          const targetAngle = Math.atan2(dir.x, dir.z);
-          this.targetRotation.setFromAxisAngle(this.yAxis, targetAngle);
+        this._tmpDir.subVectors(camera.position, this.currentPos);
+        this._tmpDir.y = 0;
+        if (this._tmpDir.lengthSq() > 0.01) {
+          this.targetRotation.setFromAxisAngle(this.yAxis, Math.atan2(this._tmpDir.x, this._tmpDir.z));
           this.model.root.quaternion.slerp(this.targetRotation, Math.min(1, 5 * dt));
         }
       }
@@ -385,11 +391,10 @@ export class NPC implements NPCController {
         this.model.root.quaternion.slerp(this.targetRotation, Math.min(1, 6 * dt));
 
         const speed = this.options.walkSpeed ?? 1.15;
-        const step = steering.steerDir.clone().multiplyScalar(speed * dt);
-        const nextPos = this.currentPos.clone().add(step);
+        this._tmpNext.copy(this.currentPos).addScaledVector(steering.steerDir, speed * dt);
 
-        if (!this.collisionWorld.checkPointCollision(nextPos, 0.46)) {
-          this.currentPos.copy(nextPos);
+        if (!this.collisionWorld.checkPointCollision(this._tmpNext, 0.46)) {
+          this.currentPos.copy(this._tmpNext);
           this.fadeToAction("Walk", 0.2);
         } else {
           this.fadeToAction("Idle", 0.2);

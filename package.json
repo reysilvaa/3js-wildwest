@@ -4,13 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "manifest": "node scripts/generate-manifest.mjs",
+    "predev": "node scripts/generate-manifest.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/generate-manifest.mjs",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
-    "asset:validate": "node scripts/asset-prep.mjs validate",
-    "asset:prep": "node scripts/asset-prep.mjs prep",
-    "asset:modular": "node scripts/asset-prep.mjs modular"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "three": "^0.187.0"

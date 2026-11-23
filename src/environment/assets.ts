@@ -1,84 +1,102 @@
 import * as THREE from "three";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { GLTFLoader, type GLTF } from "three/addons/loaders/GLTFLoader.js";
 
-export const ASSET_MAP = {
-  hotel: "/models/buildings/hotel.glb",
-  saloon: "/models/buildings/saloon.glb",
-  bank: "/models/buildings/bank.glb",
-  sheriff: "/models/buildings/sheriff.glb",
-  store: "/models/buildings/store.glb",
-  office: "/models/buildings/office.glb",
-  depot: "/models/buildings/depot.glb",
-  house: "/models/buildings/house.glb",
-  settlement: "/models/buildings/settlement.glb",
+export interface ModelsManifest {
+  buildings: Record<string, string>;
+  structures: Record<string, string>;
+  props: Record<string, string>;
+  environment: Record<string, string>;
+  animations: Record<string, string>;
+  npc: {
+    characters: string[];
+    hats: string[];
+    holsters: string[];
+  };
+}
 
-  windmill: "/models/structures/windmill.glb",
-  water_tower: "/models/structures/water_tower.glb",
-  well: "/models/structures/well.glb",
+export type AssetKey = string;
 
-  cart: "/models/props/cart.glb",
-  barrel: "/models/props/barrel.glb",
-  bench: "/models/props/bench.glb",
-  crates: "/models/props/crates.glb",
-  hitching_post: "/models/props/hitching_post.glb",
-  fence: "/models/props/fence.glb",
-  telegraph_pole: "/models/props/telegraph_pole.glb",
-
-  cloud: "/models/environment/cloud.glb",
-  tumbleweed: "/models/environment/tumbleweed.glb",
-  terrain: "/models/environment/terrain.glb",
-
-  anim_idle: "/models/movement/idle.glb",
-  anim_walk: "/models/movement/walk.glb",
-
-  npc_001: "/models/npc/characters/npc_001.glb",
-  npc_002: "/models/npc/characters/npc_002.glb",
-  npc_003: "/models/npc/characters/npc_003.glb",
-  hat_001: "/models/npc/modular/accessories/hat/hat_001.glb",
-  holster_001: "/models/npc/modular/accessories/holster/holster_001.glb",
-  holster_002: "/models/npc/modular/accessories/holster/holster_002.glb",
-} as const;
-
-export type AssetKey = keyof typeof ASSET_MAP;
-
-const loader = new GLTFLoader();
+const sharedLoader = new GLTFLoader();
+const gltfCache = new Map<string, Promise<GLTF>>();
 const assetCache = new Map<AssetKey, THREE.Group>();
+let manifestPromise: Promise<ModelsManifest> | null = null;
+let flatLookupPromise: Promise<Map<string, string>> | null = null;
 
 /**
- * Loads and caches a modular asset by its category key
+ * Loads and caches /models/manifest.json (Single Source of Truth for all 3D models).
+ */
+export function getModelsManifest(): Promise<ModelsManifest> {
+  if (!manifestPromise) {
+    manifestPromise = fetch("/models/manifest.json")
+      .then((res) => {
+        if (!res.ok) throw new Error(`Failed to load /models/manifest.json (${res.status})`);
+        return res.json() as Promise<ModelsManifest>;
+      })
+      .catch((err) => {
+        manifestPromise = null;
+        throw err;
+      });
+  }
+  return manifestPromise;
+}
+
+function getFlatAssetLookup(): Promise<Map<string, string>> {
+  if (!flatLookupPromise) {
+    flatLookupPromise = getModelsManifest().then((m) => {
+      const map = new Map<string, string>();
+      for (const group of [m.buildings, m.structures, m.props, m.environment, m.animations]) {
+        for (const [key, url] of Object.entries(group)) {
+          map.set(key, url);
+        }
+      }
+      return map;
+    });
+  }
+  return flatLookupPromise;
+}
+
+export async function resolveAssetUrl(keyOrUrl: AssetKey): Promise<string> {
+  if (keyOrUrl.startsWith("/") || keyOrUrl.startsWith("http")) return keyOrUrl;
+  const resolved = (await getFlatAssetLookup()).get(keyOrUrl);
+  if (!resolved) {
+    throw new Error(`[assets] Unknown asset key "${keyOrUrl}" not found in /models/manifest.json`);
+  }
+  return resolved;
+}
+
+/**
+ * Shared cached GLTF loader across the entire app (1 GLTFLoader, 1 network fetch per URL).
+ */
+export function loadGLTF(url: string): Promise<GLTF> {
+  let promise = gltfCache.get(url);
+  if (!promise) {
+    promise = sharedLoader.loadAsync(url).catch((err) => {
+      gltfCache.delete(url);
+      throw err;
+    });
+    gltfCache.set(url, promise);
+  }
+  return promise;
+}
+
+/**
+ * Loads and caches a static model asset by its manifest key.
  */
 export async function loadAsset(name: AssetKey): Promise<THREE.Group> {
   const cached = assetCache.get(name);
   if (cached) return cached.clone(true);
 
-  const url = ASSET_MAP[name];
-
-  return new Promise((resolve, reject) => {
-    loader.load(
-      url,
-      (gltf) => {
-        const root = gltf.scene;
-        root.traverse((child) => {
-          // SAFETY: Type assertion verified by Three.js isMesh property check
-          if ((child as THREE.Mesh).isMesh) {
-            const mesh = child as THREE.Mesh;
-            mesh.castShadow = true;
-            mesh.receiveShadow = true;
-          }
-        });
-        assetCache.set(name, root);
-        resolve(root.clone(true));
-      },
-      undefined,
-      (err) => reject(err)
-    );
+  const gltf = await loadGLTF(await resolveAssetUrl(name));
+  const root = gltf.scene;
+  root.traverse((child) => {
+    // SAFETY: Type assertion verified by Three.js isMesh property check
+    if ((child as THREE.Mesh).isMesh) {
+      child.castShadow = true;
+      child.receiveShadow = true;
+    }
   });
+  assetCache.set(name, root);
+  return root.clone(true);
 }
-
-export {
-  createModelObject,
-  type ModelObject,
-  type ModelOptions,
-} from "../core/models.js";
 
 

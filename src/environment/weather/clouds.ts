@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { loadGLTF, resolveAssetUrl } from "../assets.js";
 
 export interface CloudOptions {
   modelUrl?: string;
@@ -46,7 +46,7 @@ function createBlobShadowTexture(size = 64): THREE.CanvasTexture {
 
 export function initClouds(scene: THREE.Scene, options: CloudOptions = {}): CloudSystem {
   const {
-    modelUrl = "/models/environment/cloud.glb",
+    modelUrl = "cloud",
     shadowTexSize = 64,
   } = options;
 
@@ -63,8 +63,16 @@ export function initClouds(scene: THREE.Scene, options: CloudOptions = {}): Clou
 
   let cloudMaterials: THREE.MeshStandardMaterial[] = [];
 
-  const loader = new GLTFLoader();
-  loader.load(modelUrl, (gltf) => {
+  const sharedShadowGeo = new THREE.PlaneGeometry(16, 16);
+  sharedShadowGeo.rotateX(-Math.PI / 2);
+  const sharedShadowMat = new THREE.MeshBasicMaterial({
+    map: shadowTex,
+    transparent: true,
+    opacity: 0.35,
+    depthWrite: false,
+  });
+
+  resolveAssetUrl(modelUrl).then(loadGLTF).then((gltf) => {
     const baseModel = gltf.scene;
 
     baseModel.traverse((child) => {
@@ -92,15 +100,8 @@ export function initClouds(scene: THREE.Scene, options: CloudOptions = {}): Clou
       const s = 1.2 + Math.random() * 2.2;
       cloudMesh.scale.set(s, s * (0.8 + Math.random() * 0.4), s);
 
-      const shadowGeo = new THREE.PlaneGeometry(16 * s, 16 * s);
-      shadowGeo.rotateX(-Math.PI / 2);
-      const shadowMat = new THREE.MeshBasicMaterial({
-        map: shadowTex,
-        transparent: true,
-        opacity: 0.35,
-        depthWrite: false,
-      });
-      const shadowMesh = new THREE.Mesh(shadowGeo, shadowMat);
+      const shadowMesh = new THREE.Mesh(sharedShadowGeo, sharedShadowMat);
+      shadowMesh.scale.setScalar(s);
       shadowMesh.position.y = 0.05;
 
       const entity: CloudEntity = {

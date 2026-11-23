@@ -1,0 +1,50 @@
+{
+  "buildings": {
+    "bank": "/models/buildings/bank.glb",
+    "depot": "/models/buildings/depot.glb",
+    "hotel": "/models/buildings/hotel.glb",
+    "house": "/models/buildings/house.glb",
+    "office": "/models/buildings/office.glb",
+    "saloon": "/models/buildings/saloon.glb",
+    "settlement": "/models/buildings/settlement.glb",
+    "sheriff": "/models/buildings/sheriff.glb",
+    "store": "/models/buildings/store.glb"
+  },
+  "structures": {
+    "water_tower": "/models/structures/water_tower.glb",
+    "well": "/models/structures/well.glb",
+    "windmill": "/models/structures/windmill.glb"
+  },
+  "props": {
+    "barrel": "/models/props/barrel.glb",
+    "bench": "/models/props/bench.glb",
+    "cart": "/models/props/cart.glb",
+    "crates": "/models/props/crates.glb",
+    "fence": "/models/props/fence.glb",
+    "hitching_post": "/models/props/hitching_post.glb",
+    "telegraph_pole": "/models/props/telegraph_pole.glb"
+  },
+  "environment": {
+    "cloud": "/models/environment/cloud.glb",
+    "terrain": "/models/environment/terrain.glb",
+    "tumbleweed": "/models/environment/tumbleweed.glb"
+  },
+  "animations": {
+    "idle": "/models/animations/idle.glb",
+    "walk": "/models/animations/walk.glb"
+  },
+  "npc": {
+    "characters": [
+      "/models/npc/characters/npc_001.glb",
+      "/models/npc/characters/npc_002.glb",
+      "/models/npc/characters/npc_003.glb"
+    ],
+    "hats": [
+      "/models/npc/hats/hat_001.glb"
+    ],
+    "holsters": [
+      "/models/npc/holsters/holster_001.glb",
+      "/models/npc/holsters/holster_002.glb"
+    ]
+  }
+}

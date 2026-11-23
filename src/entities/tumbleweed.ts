@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { CollisionWorld } from "../core/collision.js";
+import { loadGLTF, resolveAssetUrl } from "../environment/assets.js";
 
 export interface TumbleweedOptions {
   modelUrl?: string;
@@ -23,11 +23,10 @@ export function initTumbleweeds(
   scene: THREE.Scene,
   options: TumbleweedOptions = {}
 ): { update: (dt: number, buildingBoxes: THREE.Box3[]) => void } {
-  const { modelUrl = "/models/environment/tumbleweed.glb", defaultDiameter = 0.8 } = options;
+  const { modelUrl = "tumbleweed", defaultDiameter = 0.8 } = options;
   const tumbleweeds: TumbleweedEntity[] = [];
-  const loader = new GLTFLoader();
 
-  loader.load(modelUrl, (gltf) => {
+  resolveAssetUrl(modelUrl).then(loadGLTF).then((gltf) => {
     const baseTW = gltf.scene;
     const twBbox = new THREE.Box3().setFromObject(baseTW);
     const twSize = twBbox.getSize(new THREE.Vector3());

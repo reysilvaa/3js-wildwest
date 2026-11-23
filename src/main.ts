@@ -8,7 +8,6 @@ import { loadWorld } from "./environment/world/town.js";
 import { initClouds } from "./environment/weather/clouds.js";
 import { initWeather } from "./environment/weather/weather.js";
 import { initNPC, resolveNPCCollisions } from "./entities/npc/npc.js";
-import { inspectNPC } from "./entities/npc/modular.js";
 import { initBubbleChat } from "./ui/bubble-chat.js";
 import { initConversationManager } from "./entities/npc/conversation.js";
 import { initTumbleweeds } from "./entities/tumbleweed.js";
@@ -82,7 +81,6 @@ const npcs = NPC_SPAWN_SPOTS.map((pos, i) =>
   initNPC(scene, buildingBoxes, camera, {
     name: NPC_NAMES[i] ?? `Resident ${i + 1}`,
     modelIndex: i,
-    useModular: true,
     modularAccessory: "random",
     initialPos: pos,
     scale: 0.83 + (i % 3) * 0.02,
@@ -95,28 +93,10 @@ const npcs = NPC_SPAWN_SPOTS.map((pos, i) =>
 const bubbleChat = initBubbleChat({ camera, headOffsetY: 1.45 });
 const conversations = initConversationManager(npcs, bubbleChat);
 
-(window as unknown as Record<string, unknown>).__npcs = npcs;
 (window as unknown as Record<string, unknown>).triggerConversation = (i = 0, j = 1) => {
   const a = npcs[i];
   const b = npcs[j];
   if (a && b) conversations.triggerPairConversation(a, b);
-};
-(window as unknown as Record<string, unknown>).sayBubble = (i = 0, text = "Howdy partner!") => {
-  const npc = npcs[i];
-  if (npc) bubbleChat.showBubble(npc.id, npc.name, text, () => npc.getPosition());
-};
-(window as unknown as Record<string, unknown>).setBubbleOffset = (y = 1.45) => {
-  bubbleChat.setHeadOffset(y);
-  console.log(`[BubbleChat] Head vertical offset updated to: ${y}m`);
-};
-(window as unknown as Record<string, unknown>).inspectNPC = (index = 0) => {
-  const npc = npcs[index];
-  if (!npc || !npc.model) {
-    console.warn(`[inspectNPC] NPC ${index} model not loaded yet (total: ${npcs.length})`);
-    return;
-  }
-  console.log(`%c=== Inspecting NPC ${index} (${npc.getState()}) ===`, "color: #ffaa00; font-weight: bold;");
-  return inspectNPC(npc.model);
 };
 
 const clock = new THREE.Clock();

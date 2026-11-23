@@ -1,25 +1,25 @@
 import * as THREE from "three";
-import type { ICollisionWorld, SeparableEntity } from "../../core/collision.js";
+import type { CollisionWorld, SeparableEntity } from "../../core/collision.js";
 
-export interface INPCNavigator {
-  setStreetNodes(nodes: THREE.Vector3[]): void;
-  planPath(currentPos: THREE.Vector3, destination: THREE.Vector3): void;
-  computeSteering(
-    currentPos: THREE.Vector3,
-    _dt: number,
-    otherEntities: SeparableEntity[],
-    selfId: string,
-    collisionWorld: ICollisionWorld
-  ): { steerDir: THREE.Vector3; isArrived: boolean; isBlocked: boolean };
-  hasWaypoints(): boolean;
-  clear(): void;
-}
+const WHISKER_ANGLES = [
+  Math.PI / 4, -Math.PI / 4,
+  Math.PI / 2, -Math.PI / 2,
+  (3 * Math.PI) / 4, (-3 * Math.PI) / 4,
+];
 
-export class NPCNavigator implements INPCNavigator {
+export class NPCNavigator {
   private readonly streetNodes: THREE.Vector3[] = [];
   private readonly pathQueue: THREE.Vector3[] = [];
   private readonly yAxis = new THREE.Vector3(0, 1, 0);
   private currentDestination: THREE.Vector3 | null = null;
+
+  // Reusable scratch vectors — zero per-frame GC allocations
+  private readonly _steerDir = new THREE.Vector3();
+  private readonly _avoid = new THREE.Vector3();
+  private readonly _toOther = new THREE.Vector3();
+  private readonly _right = new THREE.Vector3();
+  private readonly _probe = new THREE.Vector3();
+  private readonly _cand = new THREE.Vector3();
 
   public setStreetNodes(nodes: THREE.Vector3[]): void {
     this.streetNodes.length = 0;
@@ -90,31 +90,29 @@ export class NPCNavigator implements INPCNavigator {
     _dt: number,
     otherEntities: SeparableEntity[],
     selfId: string,
-    collisionWorld: ICollisionWorld
+    collisionWorld: CollisionWorld
   ): { steerDir: THREE.Vector3; isArrived: boolean; isBlocked: boolean } {
     if (this.pathQueue.length === 0 && !this.currentDestination) {
-      return { steerDir: new THREE.Vector3(), isArrived: true, isBlocked: false };
+      this._steerDir.set(0, 0, 0);
+      return { steerDir: this._steerDir, isArrived: true, isBlocked: false };
     }
 
     const activeWaypoint = this.pathQueue.length > 0 ? this.pathQueue[0]! : this.currentDestination!;
-    const toWaypoint = activeWaypoint.clone().sub(currentPos);
-    toWaypoint.y = 0;
-    const dist = toWaypoint.length();
+    this._steerDir.subVectors(activeWaypoint, currentPos);
+    this._steerDir.y = 0;
+    const dist = this._steerDir.length();
 
-    const isFinalDestination = this.pathQueue.length <= 1;
-    const arrivalRadius = isFinalDestination ? 0.9 : 0.8;
-
+    const arrivalRadius = this.pathQueue.length <= 1 ? 0.9 : 0.8;
     if (dist < arrivalRadius) {
-      if (this.pathQueue.length > 0) {
-        this.pathQueue.shift();
-      }
+      if (this.pathQueue.length > 0) this.pathQueue.shift();
       if (this.pathQueue.length === 0) {
-        return { steerDir: new THREE.Vector3(), isArrived: true, isBlocked: false };
+        this._steerDir.set(0, 0, 0);
+        return { steerDir: this._steerDir, isArrived: true, isBlocked: false };
       }
     }
 
-    const steerDir = toWaypoint.normalize();
-    const avoidanceVec = new THREE.Vector3(0, 0, 0);
+    if (dist > 0.0001) this._steerDir.divideScalar(dist);
+    this._avoid.set(0, 0, 0);
     const visionRange = 3.6;
 
     // 1. Pedestrian Right-Hand-Passing Lateral Steering
@@ -123,50 +121,44 @@ export class NPCNavigator implements INPCNavigator {
       if (other.id === selfId) continue;
 
       const oPos = other.getPosition();
-      const toOther = new THREE.Vector3(oPos.x - currentPos.x, 0, oPos.z - currentPos.z);
-      const distToOther = toOther.length();
+      this._toOther.set(oPos.x - currentPos.x, 0, oPos.z - currentPos.z);
+      const distToOther = this._toOther.length();
 
       if (distToOther < visionRange && distToOther > 0.01) {
-        toOther.normalize();
-        const forwardDot = steerDir.dot(toOther);
-        if (forwardDot > 0.15) {
-          const rightSide = new THREE.Vector3(-steerDir.z, 0, steerDir.x);
-          const isToRight = toOther.dot(rightSide) > 0;
-          const steerSign = isToRight ? -1 : 1;
+        this._toOther.divideScalar(distToOther);
+        if (this._steerDir.dot(this._toOther) > 0.15) {
+          this._right.set(-this._steerDir.z, 0, this._steerDir.x);
+          const steerSign = this._toOther.dot(this._right) > 0 ? -1 : 1;
           const urgency = (visionRange - distToOther) / visionRange;
-          avoidanceVec.add(rightSide.multiplyScalar(steerSign * urgency * 2.8));
+          this._avoid.addScaledVector(this._right, steerSign * urgency * 2.8);
         }
       }
     }
 
-    if (avoidanceVec.lengthSq() > 0.01) {
-      steerDir.add(avoidanceVec).normalize();
+    if (this._avoid.lengthSq() > 0.01) {
+      this._steerDir.add(this._avoid).normalize();
     }
 
-    // 2. Multi-Whisker Environment Sensor
-    const forwardProbe = currentPos.clone().add(steerDir.clone().multiplyScalar(2.2));
-    const nearProbe = currentPos.clone().add(steerDir.clone().multiplyScalar(1.1));
-    const centerBlocked =
-      collisionWorld.checkPointCollision(forwardProbe, 0.46) ||
-      collisionWorld.checkPointCollision(nearProbe, 0.46);
+    // 2. Multi-Whisker Environment Sensor (zero allocations)
+    this._probe.copy(currentPos).addScaledVector(this._steerDir, 2.2);
+    let centerBlocked = collisionWorld.checkPointCollision(this._probe, 0.46);
+    if (!centerBlocked) {
+      this._probe.copy(currentPos).addScaledVector(this._steerDir, 1.1);
+      centerBlocked = collisionWorld.checkPointCollision(this._probe, 0.46);
+    }
 
     if (centerBlocked) {
-      const angles = [
-        Math.PI / 4, -Math.PI / 4,
-        Math.PI / 2, -Math.PI / 2,
-        (3 * Math.PI) / 4, (-3 * Math.PI) / 4
-      ];
-      for (const angle of angles) {
-        const candidate = steerDir.clone().applyAxisAngle(this.yAxis, angle);
-        const probeFar = currentPos.clone().add(candidate.clone().multiplyScalar(1.6));
-        if (!collisionWorld.checkPointCollision(probeFar, 0.46)) {
-          steerDir.copy(candidate);
+      for (let i = 0; i < WHISKER_ANGLES.length; i++) {
+        this._cand.copy(this._steerDir).applyAxisAngle(this.yAxis, WHISKER_ANGLES[i]!);
+        this._probe.copy(currentPos).addScaledVector(this._cand, 1.6);
+        if (!collisionWorld.checkPointCollision(this._probe, 0.46)) {
+          this._steerDir.copy(this._cand);
           break;
         }
       }
     }
 
-    return { steerDir, isArrived: false, isBlocked: centerBlocked };
+    return { steerDir: this._steerDir, isArrived: false, isBlocked: centerBlocked };
   }
 
   public hasWaypoints(): boolean {

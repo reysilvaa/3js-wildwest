@@ -1,14 +1,5 @@
 import * as THREE from "three";
 
-export interface ICollisionWorld {
-  addBox(box: THREE.Box3): void;
-  addBoxes(boxes: THREE.Box3[]): void;
-  loadStaticBoxes(url?: string): Promise<THREE.Box3[]>;
-  getBoxes(): readonly THREE.Box3[];
-  checkPointCollision(pos: THREE.Vector3, radius?: number): boolean;
-  resolvePenetration(pos: THREE.Vector3, radius?: number): void;
-}
-
 export interface SeparableEntity {
   id: string;
   getPosition: () => THREE.Vector3;
@@ -19,7 +10,7 @@ export interface SeparableEntity {
 /**
  * Single Source of Truth (SSOT) Collision World for static obstacles and dynamic entity separation.
  */
-export class CollisionWorld implements ICollisionWorld {
+export class CollisionWorld {
   private readonly staticBoxes: THREE.Box3[] = [];
   private static instance: CollisionWorld | null = null;
 
@@ -68,13 +59,22 @@ export class CollisionWorld implements ICollisionWorld {
    * Check if a sphere/cylinder footprint intersects any static world box.
    */
   public checkPointCollision(pos: THREE.Vector3, radius = 0.46): boolean {
-    const min = new THREE.Vector3(pos.x - radius, pos.y + 0.1, pos.z - radius);
-    const max = new THREE.Vector3(pos.x + radius, pos.y + 1.55, pos.z + radius);
-    const box = new THREE.Box3(min, max);
+    const minX = pos.x - radius;
+    const maxX = pos.x + radius;
+    const minY = pos.y + 0.1;
+    const maxY = pos.y + 1.55;
+    const minZ = pos.z - radius;
+    const maxZ = pos.z + radius;
 
     for (let i = 0; i < this.staticBoxes.length; i++) {
       const b = this.staticBoxes[i]!;
-      if (b.intersectsBox(box)) return true;
+      if (
+        minX <= b.max.x && maxX >= b.min.x &&
+        minY <= b.max.y && maxY >= b.min.y &&
+        minZ <= b.max.z && maxZ >= b.min.z
+      ) {
+        return true;
+      }
     }
     return false;
   }
