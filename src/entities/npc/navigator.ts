@@ -22,6 +22,9 @@ export class NPCNavigator {
   private readonly _probe = new THREE.Vector3();
   private readonly _interest = new Float32Array(NUM_RAYS);
   private readonly _danger = new Float32Array(NUM_RAYS);
+  private readonly _nearbyBoxes: THREE.Box3[] = [];
+  private readonly _result = { steerDir: this._steerDir, isArrived: false, isBlocked: false };
+  private steerCooldown = Math.random() * 0.1;
 
   public setStreetNodes(nodes: THREE.Vector3[]): void {
     this.streetNodes.length = 0;
@@ -93,14 +96,16 @@ export class NPCNavigator {
 
   public computeSteering(
     currentPos: THREE.Vector3,
-    _dt: number,
+    dt: number,
     otherEntities: SeparableEntity[],
     selfId: string,
     collisionWorld: CollisionWorld
   ): { steerDir: THREE.Vector3; isArrived: boolean; isBlocked: boolean } {
     if (this.pathQueue.length === 0 && !this.currentDestination) {
       this._steerDir.set(0, 0, 0);
-      return { steerDir: this._steerDir, isArrived: true, isBlocked: false };
+      this._result.isArrived = true;
+      this._result.isBlocked = false;
+      return this._result;
     }
 
     const activeWaypoint = this.pathQueue.length > 0 ? this.pathQueue[0]! : this.currentDestination!;
@@ -111,11 +116,23 @@ export class NPCNavigator {
     const arrivalRadius = this.pathQueue.length <= 1 ? 1.0 : 0.9;
     if (dist < arrivalRadius) {
       if (this.pathQueue.length > 0) this.pathQueue.shift();
+      this.steerCooldown = 0;
       if (this.pathQueue.length === 0) {
         this._steerDir.set(0, 0, 0);
-        return { steerDir: this._steerDir, isArrived: true, isBlocked: false };
+        this._result.isArrived = true;
+        this._result.isBlocked = false;
+        return this._result;
       }
     }
+
+    // Staggered 10Hz Virtual Eyes scan (cuts 83% CPU while keeping smooth heading)
+    this.steerCooldown -= dt;
+    if (this.steerCooldown > 0 && this._steerDir.lengthSq() > 0.01) {
+      this._result.isArrived = false;
+      this._result.isBlocked = false;
+      return this._result;
+    }
+    this.steerCooldown = 0.1;
 
     const invDist = dist > 0.0001 ? 1 / dist : 0;
     const gx = goalDx * invDist;
@@ -133,37 +150,42 @@ export class NPCNavigator {
       this._danger[i] = 0;
     }
 
-    // 2. Virtual Eyes — Static Obstacle Vision (near 0.85m, mid 1.7m, far 2.7m)
+    // 2. Virtual Eyes — Static Obstacle Vision (spatial pre-filter to nearby 3.3m boxes)
     const probeY = currentPos.y;
-    for (let i = 0; i < NUM_RAYS; i++) {
-      const rx = RAY_X[i]!;
-      const rz = RAY_Z[i]!;
-      this._probe.set(currentPos.x + rx * 0.85, probeY, currentPos.z + rz * 0.85);
-      if (collisionWorld.checkPointCollision(this._probe, 0.44)) {
-        this._danger[i] = 1.0;
-        continue;
-      }
-      this._probe.set(currentPos.x + rx * 1.7, probeY, currentPos.z + rz * 1.7);
-      if (collisionWorld.checkPointCollision(this._probe, 0.44)) {
-        this._danger[i] = 0.65;
-        continue;
-      }
-      this._probe.set(currentPos.x + rx * 2.7, probeY, currentPos.z + rz * 2.7);
-      if (collisionWorld.checkPointCollision(this._probe, 0.44)) {
-        this._danger[i] = 0.28;
+    const nearBoxes = collisionWorld.queryNearbyBoxes(currentPos.x, currentPos.z, 3.3, this._nearbyBoxes);
+    if (nearBoxes.length > 0) {
+      for (let i = 0; i < NUM_RAYS; i++) {
+        const rx = RAY_X[i]!;
+        const rz = RAY_Z[i]!;
+        this._probe.set(currentPos.x + rx * 0.85, probeY, currentPos.z + rz * 0.85);
+        if (collisionWorld.checkPointCollision(this._probe, 0.44, nearBoxes)) {
+          this._danger[i] = 1.0;
+          continue;
+        }
+        this._probe.set(currentPos.x + rx * 1.7, probeY, currentPos.z + rz * 1.7);
+        if (collisionWorld.checkPointCollision(this._probe, 0.44, nearBoxes)) {
+          this._danger[i] = 0.65;
+          continue;
+        }
+        this._probe.set(currentPos.x + rx * 2.7, probeY, currentPos.z + rz * 2.7);
+        if (collisionWorld.checkPointCollision(this._probe, 0.44, nearBoxes)) {
+          this._danger[i] = 0.28;
+        }
       }
     }
 
-    // 3. Virtual Eyes — Dynamic NPC Vision (4.2m sight range + right-hand passing bias)
+    // 3. Virtual Eyes — Dynamic NPC Vision (4.2m sight range)
     const visionRange = 4.2;
+    const visionRangeSq = visionRange * visionRange;
     for (let j = 0; j < otherEntities.length; j++) {
       const other = otherEntities[j]!;
       if (other.id === selfId || (other.isPaused && other.isPaused())) continue;
       const oPos = other.getPosition();
       const ox = oPos.x - currentPos.x;
       const oz = oPos.z - currentPos.z;
-      const d = Math.hypot(ox, oz);
-      if (d < visionRange && d > 0.01) {
+      const dSq = ox * ox + oz * oz;
+      if (dSq < visionRangeSq && dSq > 0.0001) {
+        const d = Math.sqrt(dSq);
         const nx = ox / d;
         const nz = oz / d;
         const weight = d < 1.8 ? 1.0 : (visionRange - d) / visionRange;
@@ -192,7 +214,9 @@ export class NPCNavigator {
     if (bestIdx === -1) {
       // Completely surrounded — signal blocked so controller reroutes
       this._steerDir.set(-gx, 0, -gz);
-      return { steerDir: this._steerDir, isArrived: false, isBlocked: true };
+      this._result.isArrived = false;
+      this._result.isBlocked = true;
+      return this._result;
     }
 
     // Smooth blend with immediate safe neighbors to avoid jagged 22.5° snapping
@@ -214,7 +238,9 @@ export class NPCNavigator {
     }
     this._prevDir.lerp(this._steerDir, 0.35).normalize();
 
-    return { steerDir: this._steerDir, isArrived: false, isBlocked: false };
+    this._result.isArrived = false;
+    this._result.isBlocked = false;
+    return this._result;
   }
 
   public hasWaypoints(): boolean {

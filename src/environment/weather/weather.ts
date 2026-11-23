@@ -168,8 +168,12 @@ export function initWeather(
     ui.update(timeOfDay, condition, autoCycle);
   }
 
+  const stateObj = { timeOfDay, condition, autoCycle };
   function getState() {
-    return { timeOfDay, condition, autoCycle };
+    stateObj.timeOfDay = timeOfDay;
+    stateObj.condition = condition;
+    stateObj.autoCycle = autoCycle;
+    return stateObj;
   }
 
   const ui: WeatherUI = initWeatherUI({

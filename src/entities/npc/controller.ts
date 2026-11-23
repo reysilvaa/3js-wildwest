@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { assembleModularCharacter, getRandomHatUrl, getRandomModularConfig, type NPCModel } from "./modular.js";
-import { getGroundElevation } from "../../environment/terrain/height.js";
+import { getGroundHeightOnly } from "../../environment/terrain/height.js";
 import { CollisionWorld, type SeparableEntity } from "../../core/collision.js";
 import { NPCNavigator } from "./navigator.js";
 import { getModelsManifest, loadGLTF } from "../../environment/assets.js";
@@ -273,7 +273,7 @@ export class NPC implements NPCController {
     try {
       const animMap = await getSharedNPCAnimations(this.options.walkAnimUrl, this.options.idleAnimUrl);
       for (const [name, clip] of animMap) {
-        modelObj.animations.set(name, clip.clone());
+        modelObj.animations.set(name, clip);
       }
     } catch (err) {
       console.warn(`[NPC ${this.name}] Failed to load animations:`, err);
@@ -365,7 +365,7 @@ export class NPC implements NPCController {
         this.currentPos.x += this._tmpDir.x * step;
         this.currentPos.z += this._tmpDir.z * step;
       }
-      const baseY = getGroundElevation(this.currentPos.x, this.currentPos.z).height;
+      const baseY = getGroundHeightOnly(this.currentPos.x, this.currentPos.z);
       const targetY = this.collisionWorld.getSurfaceHeight(this.currentPos.x, this.currentPos.z, baseY);
       this.currentPos.y += (targetY - this.currentPos.y) * Math.min(1, 14 * dt);
       this.model.root.position.copy(this.currentPos);
@@ -404,7 +404,7 @@ export class NPC implements NPCController {
     }
 
     const camera = this.options.camera;
-    const playerNearby = camera ? camera.position.distanceTo(this.currentPos) < 5.5 : false;
+    const playerNearby = camera ? camera.position.distanceToSquared(this.currentPos) < 30.25 : false;
 
     if (this.options.stationary) {
       if (playerNearby && camera) {
@@ -571,10 +571,12 @@ export class NPC implements NPCController {
   }
 
   private syncPosition(dt = 0.016): void {
-    const baseY = getGroundElevation(this.currentPos.x, this.currentPos.z).height;
+    const baseY = getGroundHeightOnly(this.currentPos.x, this.currentPos.z);
     const targetY = this.collisionWorld.getSurfaceHeight(this.currentPos.x, this.currentPos.z, baseY);
     this.currentPos.y += (targetY - this.currentPos.y) * Math.min(1, 14 * dt);
-    this.collisionWorld.resolvePenetration(this.currentPos, 0.46);
+    if (this.state === "WALK") {
+      this.collisionWorld.resolvePenetration(this.currentPos, 0.46);
+    }
     if (this.model) {
       this.model.root.position.copy(this.currentPos);
     }

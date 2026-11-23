@@ -47,8 +47,8 @@ let streetCameraActive = false;
     camera.position.set(10.0, 1.8, 5.0);
     controls.target.set(10.0, 1.6, -10.0);
   } else {
-    camera.position.set(10.0, 14.0, 28.0);
-    controls.target.set(10.0, 1.5, -6.0);
+    camera.position.set(10.0, 11.5, 30.0);
+    controls.target.set(9.5, 4.5, -16.0);
   }
 };
 
@@ -130,7 +130,8 @@ function animate() {
   const dt = Math.min(clock.getDelta(), 0.1);
 
   cameraController.update(dt);
-  ground.update(dt, weather.getState().condition === "rain");
+  const wState = weather.getState();
+  ground.update(dt, wState.condition === "rain");
   world.update(dt);
   weather.update(dt);
   audio.update(dt);
@@ -142,7 +143,7 @@ function animate() {
   bubbleChat.update(camera, dt);
   buildingPanels.update(camera);
   tumbleweeds.update(dt, buildingBoxes);
-  clouds.update(dt, weather.getState());
+  clouds.update(dt, wState);
   controls.update();
 
   renderer.render(scene, camera);

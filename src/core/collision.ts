@@ -82,10 +82,25 @@ export class CollisionWorld {
     return this.staticBoxes;
   }
 
+  public queryNearbyBoxes(x: number, z: number, range: number, out: THREE.Box3[]): THREE.Box3[] {
+    out.length = 0;
+    const minX = x - range;
+    const maxX = x + range;
+    const minZ = z - range;
+    const maxZ = z + range;
+    for (let i = 0; i < this.staticBoxes.length; i++) {
+      const b = this.staticBoxes[i]!;
+      if (minX <= b.max.x && maxX >= b.min.x && minZ <= b.max.z && maxZ >= b.min.z) {
+        out.push(b);
+      }
+    }
+    return out;
+  }
+
   /**
    * Check if a sphere/cylinder footprint intersects any static world box.
    */
-  public checkPointCollision(pos: THREE.Vector3, radius = 0.46): boolean {
+  public checkPointCollision(pos: THREE.Vector3, radius = 0.46, boxes: readonly THREE.Box3[] = this.staticBoxes): boolean {
     const minX = pos.x - radius;
     const maxX = pos.x + radius;
     const stepHeight = 0.55; // Low steps/porches up to 0.55m are walkable, not blocking walls
@@ -94,8 +109,8 @@ export class CollisionWorld {
     const minZ = pos.z - radius;
     const maxZ = pos.z + radius;
 
-    for (let i = 0; i < this.staticBoxes.length; i++) {
-      const b = this.staticBoxes[i]!;
+    for (let i = 0; i < boxes.length; i++) {
+      const b = boxes[i]!;
       if (
         minX <= b.max.x && maxX >= b.min.x &&
         minY <= b.max.y && maxY >= b.min.y &&

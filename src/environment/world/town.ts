@@ -144,6 +144,9 @@ export function loadWorld(
     .then(async (instances) => {
       const total = instances.length;
       let loaded = 0;
+      // Parallel pre-warm unique GLBs instead of 20-step sequential network waterfall
+      const uniqueAssets = [...new Set(instances.map((i) => i.asset))];
+      await Promise.all(uniqueAssets.map((a) => loadAsset(a).catch(() => null)));
 
       for (const inst of instances) {
         try {
@@ -254,6 +257,7 @@ export function loadWorld(
                     // Glass window panes: low roughness, high specular bounce
                     if (!windowMaterials.includes(stdMat)) {
                       windowMaterials.push(stdMat);
+                      stdMat.emissive.setHex(0xffcb73);
                       stdMat.emissiveIntensity = 0; // Off by default during bright day
                     }
                     stdMat.roughness = 0.16;
@@ -287,8 +291,8 @@ export function loadWorld(
       }
 
       const bbox = new THREE.Box3().setFromObject(townRoot);
-      controls.target.set(10.0, 1.5, -6.0);
-      camera.position.set(10.0, 14.0, 28.0);
+      controls.target.set(9.5, 4.5, -16.0);
+      camera.position.set(10.0, 11.5, 30.0);
       controls.update();
 
       renderer.shadowMap.needsUpdate = true;
@@ -322,18 +326,22 @@ export function loadWorld(
     }
   }
 
+  let lastIndoorFactor = -1;
   function setIndoorLighting(factor: number): void {
     const clamped = Math.max(0, Math.min(1, factor));
+    if (Math.abs(clamped - lastIndoorFactor) < 0.002) return;
+    lastIndoorFactor = clamped;
     const active = clamped > 0.01;
-    for (const mat of windowMaterials) {
-      mat.emissiveIntensity = clamped * 2.8;
-      mat.emissive.setHex(0xffcb73);
+    for (let i = 0; i < windowMaterials.length; i++) {
+      windowMaterials[i]!.emissiveIntensity = clamped * 2.8;
     }
-    for (const item of indoorLights) {
+    for (let i = 0; i < indoorLights.length; i++) {
+      const item = indoorLights[i]!;
       item.light.visible = active;
       if (active) item.light.intensity = clamped * item.maxIntensity;
     }
-    for (const pl of porchLights) {
+    for (let i = 0; i < porchLights.length; i++) {
+      const pl = porchLights[i]!;
       pl.visible = active;
       if (active) pl.intensity = clamped * 2.2;
     }

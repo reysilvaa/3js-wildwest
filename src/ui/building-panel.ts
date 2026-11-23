@@ -12,7 +12,7 @@ function injectStyles(): void {
       position: fixed; inset: 0; pointer-events: none; z-index: 44; overflow: hidden;
     }
     .bldg-occ-bubble {
-      position: absolute;
+      position: absolute; left: 0; top: 0;
       display: flex; flex-direction: column; align-items: center; gap: 5px;
       min-width: 150px;
       background-image: url("/ui/bubble-frame.png");
@@ -57,13 +57,17 @@ export function initBuildingPanels(getBuildings: () => readonly InteractiveBuild
   layer.className = "bldg-occ-layer";
   document.body.appendChild(layer);
 
-  const nodes = new Map<string, { el: HTMLDivElement; sig: string }>();
+  const nodes = new Map<string, { el: HTMLDivElement; sig: string; lastTf: string }>();
   const proj = new THREE.Vector3();
+  let vpW = window.innerWidth;
+  let vpH = window.innerHeight;
+  window.addEventListener("resize", () => {
+    vpW = window.innerWidth;
+    vpH = window.innerHeight;
+  });
 
   function update(camera: THREE.Camera): void {
     const buildings = getBuildings();
-    const w = window.innerWidth;
-    const h = window.innerHeight;
 
     for (let i = 0; i < buildings.length; i++) {
       const b = buildings[i]!;
@@ -74,6 +78,7 @@ export function initBuildingPanels(getBuildings: () => readonly InteractiveBuild
         if (entry && entry.el.style.display !== "none") {
           entry.el.style.display = "none";
           entry.sig = "";
+          entry.lastTf = "";
         }
         continue;
       }
@@ -83,7 +88,10 @@ export function initBuildingPanels(getBuildings: () => readonly InteractiveBuild
       const inView = proj.z >= -1 && proj.z <= 1 && dist < 85;
 
       if (!inView) {
-        if (entry && entry.el.style.display !== "none") entry.el.style.display = "none";
+        if (entry && entry.el.style.display !== "none") {
+          entry.el.style.display = "none";
+          entry.lastTf = "";
+        }
         continue;
       }
 
@@ -91,32 +99,37 @@ export function initBuildingPanels(getBuildings: () => readonly InteractiveBuild
         const el = document.createElement("div");
         el.className = "bldg-occ-bubble";
         layer.appendChild(el);
-        entry = { el, sig: "" };
+        entry = { el, sig: "", lastTf: "" };
         nodes.set(b.id, entry);
       }
 
-      const sig = occ.map((o) => o.id).join(",");
+      let sig = "";
+      for (let k = 0; k < occ.length; k++) {
+        sig += (k > 0 ? "," : "") + occ[k]!.id;
+      }
       if (entry.sig !== sig) {
         entry.sig = sig;
-        const chips = occ
-          .map(
-            (o) =>
-              `<div class="bldg-occ-chip">` +
-              `<img class="bldg-occ-avatar" src="${o.portraitUrl}" alt="${o.name}" />` +
-              `<span class="bldg-occ-name">${o.name}</span>` +
-              `</div>`
-          )
-          .join("");
+        let chips = "";
+        for (let k = 0; k < occ.length; k++) {
+          const o = occ[k]!;
+          chips +=
+            `<div class="bldg-occ-chip">` +
+            `<img class="bldg-occ-avatar" src="${o.portraitUrl}" alt="${o.name}" />` +
+            `<span class="bldg-occ-name">${o.name}</span>` +
+            `</div>`;
+        }
         entry.el.innerHTML = `<div class="bldg-occ-title">${b.label} (${occ.length})</div><div class="bldg-occ-faces">${chips}</div>`;
       }
 
-      const sx = (proj.x * 0.5 + 0.5) * w;
-      const sy = (-proj.y * 0.5 + 0.5) * h;
-      const scale = Math.max(0.65, Math.min(1.05, 36 / Math.max(18, dist)));
-      entry.el.style.display = "flex";
-      entry.el.style.left = `${sx.toFixed(1)}px`;
-      entry.el.style.top = `${sy.toFixed(1)}px`;
-      entry.el.style.transform = `translate(-50%, -100%) scale(${scale.toFixed(2)})`;
+      const sx = ((proj.x * 0.5 + 0.5) * vpW).toFixed(1);
+      const sy = ((-proj.y * 0.5 + 0.5) * vpH).toFixed(1);
+      const scale = Math.max(0.65, Math.min(1.05, 36 / Math.max(18, dist))).toFixed(2);
+      const tf = `translate3d(${sx}px,${sy}px,0) translate(-50%,-100%) scale(${scale})`;
+      if (entry.el.style.display !== "flex") entry.el.style.display = "flex";
+      if (entry.lastTf !== tf) {
+        entry.lastTf = tf;
+        entry.el.style.transform = tf;
+      }
     }
   }
 
