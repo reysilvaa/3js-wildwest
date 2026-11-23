@@ -7,18 +7,22 @@ import { getModelsManifest, loadGLTF } from "../../environment/assets.js";
 
 export type NPCState = "IDLE" | "WALK" | "GREET" | "ACTIVITY";
 
+export type NPCZone = "center" | "south" | "west" | "east";
+
 export interface TownActivity {
   name: string;
   description: string;
   spot: THREE.Vector3;
   facingAngle: number;
   duration: number;
+  zone?: NPCZone;
 }
 
 export interface NPCOptions {
   name?: string;
   modelUrl?: string;
   modelIndex?: number;
+  homeZone?: NPCZone;
   modularAccessory?: "cowboy_hat" | "none" | "random";
   outfitColor?: number | THREE.Color;
   initialPos?: [number, number, number];
@@ -79,7 +83,7 @@ function filterTracks(clip: THREE.AnimationClip): THREE.AnimationClip {
 
 interface NPCDataPayload {
   streetNodes?: [number, number, number][];
-  activities?: { name: string; description: string; spot: [number, number, number]; facingAngle: number; duration: number }[];
+  activities?: { name: string; description: string; spot: [number, number, number]; facingAngle: number; duration: number; zone?: NPCZone }[];
 }
 
 const npcDataCache = new Map<string, Promise<NPCDataPayload | null>>();
@@ -150,7 +154,7 @@ export class NPC implements NPCController {
   public model: NPCModel | null = null;
 
   private state: NPCState = "ACTIVITY";
-  private stateTimer = 3.0;
+  private stateTimer = 0.6 + Math.random() * 4.5;
   private pauseTimer = 0;
   private faceTimer = 0;
   private forcedFaceTarget: THREE.Vector3 | null = null;
@@ -207,6 +211,7 @@ export class NPC implements NPCController {
           spot: new THREE.Vector3(...a.spot),
           facingAngle: a.facingAngle,
           duration: a.duration,
+          zone: a.zone,
         });
       }
       const initialIdx = Math.min(this.currentActivityIndex, this.activities.length - 1);
@@ -427,10 +432,18 @@ export class NPC implements NPCController {
       }
     }
 
+    const homeZone = this.options.homeZone;
+    const preferHome = homeZone !== undefined && Math.random() < 0.72;
     const candidates: number[] = [];
     for (let i = 0; i < this.activities.length; i++) {
-      if (i !== this.currentActivityIndex && !occupiedIndices.has(i)) {
+      if (i === this.currentActivityIndex || occupiedIndices.has(i)) continue;
+      if (!preferHome || this.activities[i]!.zone === homeZone) {
         candidates.push(i);
+      }
+    }
+    if (candidates.length === 0) {
+      for (let i = 0; i < this.activities.length; i++) {
+        if (i !== this.currentActivityIndex && !occupiedIndices.has(i)) candidates.push(i);
       }
     }
     if (candidates.length === 0) {

@@ -43,7 +43,7 @@ export function initDesertGround(scene: THREE.Scene, options: GroundOptions = {}
     size = 1200,
     segments = 64,
     townCenter = [10, -5],
-    flatRadius = 50,
+    flatRadius = 85,
   } = options;
 
   const geo = new THREE.PlaneGeometry(size, size, segments, segments);

@@ -51,38 +51,59 @@ let streetCameraActive = false;
   }
 };
 
-const NPC_SPAWN_SPOTS: [number, number, number][] = [
-  [13.2, 0.45, -7.5],  // 0: Saloon Porch
-  [6.8, 0.45, 7.0],    // 1: Bank Steps
-  [13.0, 0.45, 0.5],   // 2: Sheriff Office
-  [13.0, 0.45, 12.0],  // 3: General Store
-  [6.8, 0.45, -16.0],  // 4: Train Depot
-  [10.2, 0.45, -3.5],  // 5: Saloon Hitching Post
-  [6.8, 0.45, -6.5],   // 6: Hotel Boardwalk
-  [8.8, 0.45, 17.5],   // 7: Water Tower Crossing
-  [9.5, 0.45, -23.5],  // 8: Depot Freight Dock
-  [10.0, 0.45, -1.0],  // 9: Main Street Crossing
+const NPC_SPAWNS: Array<{ pos: [number, number, number]; zone: "center" | "south" | "west" | "east" }> = [
+  // Town Center (14 NPCs — busiest downtown hub!)
+  { pos: [13.2, 0.45, -7.5],  zone: "center" },
+  { pos: [6.8,  0.45,  7.0],  zone: "center" },
+  { pos: [13.0, 0.45,  0.5],  zone: "center" },
+  { pos: [13.0, 0.45, 12.0],  zone: "center" },
+  { pos: [6.8,  0.45, -16.0], zone: "center" },
+  { pos: [10.2, 0.45, -3.5],  zone: "center" },
+  { pos: [6.8,  0.45, -6.5],  zone: "center" },
+  { pos: [8.8,  0.45, 17.5],  zone: "center" },
+  { pos: [9.5,  0.45, -23.5], zone: "center" },
+  { pos: [10.0, 0.45, -1.0],  zone: "center" },
+  { pos: [11.5, 0.45, -14.0], zone: "center" },
+  { pos: [8.2,  0.45,  3.5],  zone: "center" },
+  { pos: [12.0, 0.45,  8.5],  zone: "center" },
+  { pos: [7.5,  0.45, -11.5], zone: "center" },
+  // South Main Street (8 NPCs)
+  { pos: [5.2,  0.0, 26.5],   zone: "south" },
+  { pos: [15.0, 0.0, 31.0],   zone: "south" },
+  { pos: [4.8,  0.0, 39.5],   zone: "south" },
+  { pos: [14.8, 0.0, 44.0],   zone: "south" },
+  { pos: [4.6,  0.0, 51.5],   zone: "south" },
+  { pos: [15.8, 0.0, 55.0],   zone: "south" },
+  { pos: [4.8,  0.0, 62.5],   zone: "south" },
+  { pos: [16.2, 0.0, 64.0],   zone: "south" },
+  // West Homesteads (5 NPCs)
+  { pos: [-21.5, 0.0, -10.0], zone: "west" },
+  { pos: [-23.0, 0.0,   4.0], zone: "west" },
+  { pos: [-22.0, 0.0,  15.0], zone: "west" },
+  { pos: [-22.5, 0.0,  28.0], zone: "west" },
+  { pos: [-24.0, 0.0,  42.0], zone: "west" },
+  // East Frontier Outskirts (5 NPCs)
+  { pos: [33.0,  0.0, -12.0], zone: "east" },
+  { pos: [38.0,  0.0,   3.0], zone: "east" },
+  { pos: [33.5,  0.0,  18.0], zone: "east" },
+  { pos: [34.0,  0.0,  32.0], zone: "east" },
+  { pos: [35.0,  0.0,  48.0], zone: "east" },
 ];
 
 const NPC_NAMES = [
-  "Arthur",
-  "Wyatt",
-  "Doc",
-  "Sadie",
-  "Jack",
-  "Hosea",
-  "Bill",
-  "Dutch",
-  "Abigail",
-  "John",
+  "Arthur", "Wyatt", "Doc", "Sadie", "Jack", "Hosea", "Bill", "Dutch",
+  "Abigail", "John", "Charles", "Javier", "Lenny", "Micah", "Pearson", "Sean",
+  "Kieran", "Josiah", "Uncle", "Reverend", "Caleb", "Eli", "Silas", "Boone",
+  "Harlan", "Wade", "Cole", "Jesse", "Gideon", "Travis", "Beau", "Clint",
 ];
 
-const npcs = NPC_SPAWN_SPOTS.map((pos, i) =>
+const npcs = NPC_SPAWNS.map((spawn, i) =>
   initNPC(scene, buildingBoxes, camera, {
     name: NPC_NAMES[i] ?? `Resident ${i + 1}`,
     modelIndex: i,
+    homeZone: spawn.zone,
     modularAccessory: "random",
-    initialPos: pos,
+    initialPos: spawn.pos,
     scale: 0.83 + (i % 3) * 0.02,
     walkSpeed: 1.02 + (i % 4) * 0.04,
     stationary: false,

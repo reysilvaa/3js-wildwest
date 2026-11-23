@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { loadAsset, AssetKey } from "../assets.js";
+import { getGroundHeightOnly } from "../terrain/height.js";
 
 export interface TownInstance {
   asset: AssetKey;
@@ -20,6 +21,15 @@ export interface WorldContext {
   setIndoorLighting: (intensity: number) => void;
 }
 
+const BUILDING_ASSETS = new Set([
+  "hotel", "saloon", "bank", "sheriff", "store",
+  "office", "depot", "house", "settlement", "water_tower", "windmill",
+]);
+const SOLID_OBSTACLE_ASSETS = new Set([
+  ...BUILDING_ASSETS,
+  "cart", "well", "fence", "crates", "bench", "hitching_post", "telegraph_pole",
+]);
+
 export function loadWorld(
   scene: THREE.Scene,
   controls: OrbitControls,
@@ -33,7 +43,7 @@ export function loadWorld(
   townRoot.name = "ModularTown";
   scene.add(townRoot);
 
-  let windmillBlades: THREE.Object3D | null = null;
+  const windmillBladesList: THREE.Object3D[] = [];
   const windowMaterials: THREE.MeshStandardMaterial[] = [];
   const porchLights: THREE.PointLight[] = [];
 
@@ -113,7 +123,8 @@ export function loadWorld(
       for (const inst of instances) {
         try {
           const model = await loadAsset(inst.asset);
-          model.position.set(...inst.pos);
+          const groundY = getGroundHeightOnly(inst.pos[0], inst.pos[2]);
+          model.position.set(inst.pos[0], groundY + inst.pos[1], inst.pos[2]);
           model.quaternion.set(...inst.rot);
           if (inst.scale) model.scale.set(...inst.scale);
 
@@ -121,22 +132,14 @@ export function loadWorld(
           model.updateMatrixWorld(true);
 
           if (inst.asset === "windmill") {
-            windmillBlades =
+            const blades =
               model.getObjectByName("Cylinder005") ||
-              model.getObjectByName("Cylinder.005") ||
-              null;
+              model.getObjectByName("Cylinder.005");
+            if (blades) windmillBladesList.push(blades);
           }
 
-          const BUILDING_ASSETS = new Set([
-            "hotel", "saloon", "bank", "sheriff", "store",
-            "office", "depot", "house", "settlement", "water_tower", "windmill"
-          ]);
-          const SOLID_OBSTACLE_ASSETS = new Set([
-            ...BUILDING_ASSETS,
-            "cart", "well", "fence", "crates", "bench", "hitching_post", "telegraph_pole"
-          ]);
           const isBuilding = BUILDING_ASSETS.has(inst.asset);
-          const isObstacle = SOLID_OBSTACLE_ASSETS.has(inst.asset) && !BUILDING_ASSETS.has(inst.asset);
+          const isObstacle = SOLID_OBSTACLE_ASSETS.has(inst.asset) && !isBuilding;
 
           if (isObstacle) {
             const wholeBox = new THREE.Box3().setFromObject(model);
@@ -215,9 +218,9 @@ export function loadWorld(
     });
 
   function update(dt: number): void {
-    if (windmillBlades) {
-      // Windmill wheel axle is local Y in glTF space; rotateY spins blades cleanly around center hub
-      windmillBlades.rotateY(1.2 * dt);
+    const spin = 1.2 * dt;
+    for (let i = 0; i < windmillBladesList.length; i++) {
+      windmillBladesList[i]!.rotateY(spin);
     }
   }
 

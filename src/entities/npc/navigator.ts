@@ -32,7 +32,11 @@ export class NPCNavigator {
     this.pathQueue.length = 0;
     this.currentDestination = destination.clone();
 
-    if (this.streetNodes.length === 0) {
+    const sameSideOutskirt =
+      (currentPos.x < -10 && destination.x < -10) ||
+      (currentPos.x > 26 && destination.x > 26);
+
+    if (this.streetNodes.length === 0 || sameSideOutskirt || currentPos.distanceTo(destination) < 18) {
       this.pathQueue.push(destination.clone());
       return;
     }
@@ -60,11 +64,11 @@ export class NPCNavigator {
     }
 
     const pushWaypointsAlongStreet = (baseNode: THREE.Vector3) => {
-      // Two-way street rule: Northbound (-Z) walks East (X ~ 10.8), Southbound (+Z) walks West (X ~ 8.8)
+      // Two-way street rule relative to each street node's centerline
       const movingNorth = destination.z < currentPos.z;
-      const laneX = movingNorth ? 10.8 : 8.8;
-      const jitter = (Math.random() - 0.5) * 0.4;
-      const targetX = Math.max(7.8, Math.min(12.2, laneX + jitter));
+      const laneOffset = movingNorth ? 0.9 : -0.9;
+      const jitter = (Math.random() - 0.5) * 0.5;
+      const targetX = baseNode.x + laneOffset + jitter;
       const targetZ = baseNode.z + (Math.random() - 0.5) * 0.6;
       this.pathQueue.push(new THREE.Vector3(targetX, baseNode.y, targetZ));
     };

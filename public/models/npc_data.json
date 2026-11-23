@@ -28,119 +28,466 @@
     [
       9.5,
       0,
-      16.0
+      17.0
+    ],
+    [
+      10.0,
+      0,
+      26.0
+    ],
+    [
+      9.5,
+      0,
+      36.0
+    ],
+    [
+      10.0,
+      0,
+      46.0
+    ],
+    [
+      9.5,
+      0,
+      56.0
+    ],
+    [
+      10.0,
+      0,
+      64.0
     ]
   ],
   "activities": [
     {
       "name": "Saloon Porch",
-      "description": "Resting on the wooden boardwalk outside the Saloon",
+      "description": "Resting outside the Saloon",
       "spot": [
         13.2,
         0.45,
         -7.5
       ],
-      "facingAngle": -1.5708,
-      "duration": 8.0
+      "facingAngle": -1.57,
+      "duration": 7.0,
+      "zone": "center"
     },
     {
       "name": "Bank Steps",
-      "description": "Surveying the main street from the bank boardwalk",
+      "description": "Surveying main street from the Bank",
       "spot": [
         6.8,
         0.45,
         7.0
       ],
-      "facingAngle": 1.5708,
-      "duration": 10.0
+      "facingAngle": 1.57,
+      "duration": 8.0,
+      "zone": "center"
     },
     {
       "name": "Sheriff Office",
-      "description": "Checking notice boards near the sheriff station",
+      "description": "Checking notices at Sheriff Office",
       "spot": [
         13.0,
         0.45,
         0.5
       ],
-      "facingAngle": -1.5708,
-      "duration": 7.0
+      "facingAngle": -1.57,
+      "duration": 7.0,
+      "zone": "center"
     },
     {
       "name": "General Store",
-      "description": "Browsing goods on the porch of the general store",
+      "description": "Browsing goods at the General Store",
       "spot": [
         13.0,
         0.45,
         12.0
       ],
-      "facingAngle": -1.5708,
-      "duration": 9.0
+      "facingAngle": -1.57,
+      "duration": 8.0,
+      "zone": "center"
     },
     {
       "name": "Train Depot",
-      "description": "Watching the tracks at the railway depot platform",
+      "description": "Watching the depot platform",
       "spot": [
         6.8,
         0.45,
         -16.0
       ],
-      "facingAngle": 1.5708,
-      "duration": 12.0
+      "facingAngle": 1.57,
+      "duration": 9.0,
+      "zone": "center"
     },
     {
-      "name": "Saloon Hitching Post",
-      "description": "Inspecting horses by the hitching post near the saloon",
+      "name": "Saloon Hitching",
+      "description": "Checking horses near the Saloon",
       "spot": [
         10.2,
         0.45,
         -3.5
       ],
-      "facingAngle": -1.5708,
-      "duration": 8.0
+      "facingAngle": -1.57,
+      "duration": 6.0,
+      "zone": "center"
     },
     {
       "name": "Hotel Boardwalk",
-      "description": "Strolling the covered walkway outside the frontier hotel",
+      "description": "Strolling by the Hotel boardwalk",
       "spot": [
         6.8,
         0.45,
         -6.5
       ],
-      "facingAngle": 1.5708,
-      "duration": 9.0
+      "facingAngle": 1.57,
+      "duration": 7.0,
+      "zone": "center"
     },
     {
-      "name": "Water Tower Crossing",
-      "description": "Pausing near the street crossing toward the water tower",
+      "name": "South Center Cross",
+      "description": "Crossing main street by the well",
       "spot": [
         8.8,
         0.45,
         17.5
       ],
-      "facingAngle": 3.1415,
-      "duration": 7.0
+      "facingAngle": 0.0,
+      "duration": 6.0,
+      "zone": "center"
     },
     {
-      "name": "Depot Freight Dock",
-      "description": "Surveying the railway tracks by the freight dock",
+      "name": "Hotel Plaza",
+      "description": "Gathering in front of the Hotel",
       "spot": [
         9.5,
         0.45,
         -23.5
       ],
       "facingAngle": 0.0,
-      "duration": 10.0
+      "duration": 8.0,
+      "zone": "center"
     },
     {
-      "name": "Main Street Crossing",
-      "description": "Standing on the wide dusty avenue between bank and sheriff",
+      "name": "Main Street Hub",
+      "description": "Chatting in the center of town",
       "spot": [
         10.0,
         0.45,
         -1.0
       ],
-      "facingAngle": 1.2,
-      "duration": 6.5
+      "facingAngle": 1.57,
+      "duration": 6.0,
+      "zone": "center"
+    },
+    {
+      "name": "North Saloon Corner",
+      "description": "Leaning by the north saloon rail",
+      "spot": [
+        12.5,
+        0.45,
+        -14.5
+      ],
+      "facingAngle": -1.57,
+      "duration": 7.0,
+      "zone": "center"
+    },
+    {
+      "name": "Mid Street West",
+      "description": "Pausing on the west boardwalk",
+      "spot": [
+        7.5,
+        0.45,
+        2.0
+      ],
+      "facingAngle": 1.57,
+      "duration": 6.0,
+      "zone": "center"
+    },
+    {
+      "name": "Mid Street East",
+      "description": "Watching wagons pass on main street",
+      "spot": [
+        12.2,
+        0.45,
+        7.5
+      ],
+      "facingAngle": -1.57,
+      "duration": 7.0,
+      "zone": "center"
+    },
+    {
+      "name": "Depot Corner",
+      "description": "Waiting near the freight crates",
+      "spot": [
+        7.4,
+        0.45,
+        -11.0
+      ],
+      "facingAngle": 1.57,
+      "duration": 8.0,
+      "zone": "center"
+    },
+    {
+      "name": "North Office Steps",
+      "description": "Standing outside the town office",
+      "spot": [
+        16.5,
+        0.45,
+        -22.5
+      ],
+      "facingAngle": 0.2,
+      "duration": 7.0,
+      "zone": "center"
+    },
+    {
+      "name": "Storefront Corner",
+      "description": "Checking deliveries by the store",
+      "spot": [
+        12.8,
+        0.45,
+        16.5
+      ],
+      "facingAngle": -1.57,
+      "duration": 7.0,
+      "zone": "center"
+    },
+    {
+      "name": "South West Porch",
+      "description": "Resting outside south house",
+      "spot": [
+        5.2,
+        0.0,
+        26.5
+      ],
+      "facingAngle": 1.57,
+      "duration": 7.0,
+      "zone": "south"
+    },
+    {
+      "name": "South East Porch",
+      "description": "Standing by south east porch",
+      "spot": [
+        15.0,
+        0.0,
+        29.0
+      ],
+      "facingAngle": -1.57,
+      "duration": 8.0,
+      "zone": "south"
+    },
+    {
+      "name": "South Office Rail",
+      "description": "Chatting near south office",
+      "spot": [
+        4.8,
+        0.0,
+        39.0
+      ],
+      "facingAngle": 1.5,
+      "duration": 8.0,
+      "zone": "south"
+    },
+    {
+      "name": "South Storefront",
+      "description": "Browsing the south general store",
+      "spot": [
+        14.8,
+        0.0,
+        41.0
+      ],
+      "facingAngle": -1.57,
+      "duration": 9.0,
+      "zone": "south"
+    },
+    {
+      "name": "South Tavern Porch",
+      "description": "Hanging out at the south saloon",
+      "spot": [
+        4.5,
+        0.0,
+        51.5
+      ],
+      "facingAngle": 1.45,
+      "duration": 9.0,
+      "zone": "south"
+    },
+    {
+      "name": "South Bank Corner",
+      "description": "Guarding the south bank steps",
+      "spot": [
+        15.8,
+        0.0,
+        53.0
+      ],
+      "facingAngle": -1.57,
+      "duration": 8.0,
+      "zone": "south"
+    },
+    {
+      "name": "South Gate West",
+      "description": "Watching travelers from the south",
+      "spot": [
+        4.5,
+        0.0,
+        63.0
+      ],
+      "facingAngle": 1.4,
+      "duration": 8.0,
+      "zone": "south"
+    },
+    {
+      "name": "South Gate East",
+      "description": "Surveying the southern horizon",
+      "spot": [
+        16.5,
+        0.0,
+        64.0
+      ],
+      "facingAngle": -1.4,
+      "duration": 8.0,
+      "zone": "south"
+    },
+    {
+      "name": "West Cabin North",
+      "description": "Tending supplies by north cabin",
+      "spot": [
+        -21.5,
+        0.0,
+        -11.0
+      ],
+      "facingAngle": -1.5,
+      "duration": 8.0,
+      "zone": "west"
+    },
+    {
+      "name": "West Cart Yard",
+      "description": "Inspecting the homestead wagon",
+      "spot": [
+        -22.5,
+        0.0,
+        -1.0
+      ],
+      "facingAngle": -1.2,
+      "duration": 8.0,
+      "zone": "west"
+    },
+    {
+      "name": "West Well Plaza",
+      "description": "Drawing water at the west well",
+      "spot": [
+        -23.0,
+        0.0,
+        11.0
+      ],
+      "facingAngle": -1.3,
+      "duration": 9.0,
+      "zone": "west"
+    },
+    {
+      "name": "West Office Porch",
+      "description": "Resting by the west homestead office",
+      "spot": [
+        -22.0,
+        0.0,
+        23.0
+      ],
+      "facingAngle": -1.57,
+      "duration": 8.0,
+      "zone": "west"
+    },
+    {
+      "name": "West Cabin South",
+      "description": "Walking past the south-west cabin",
+      "spot": [
+        -25.0,
+        0.0,
+        37.0
+      ],
+      "facingAngle": -1.4,
+      "duration": 9.0,
+      "zone": "west"
+    },
+    {
+      "name": "West Windmill Yard",
+      "description": "Watching the west windmill spin",
+      "spot": [
+        -24.0,
+        0.0,
+        49.0
+      ],
+      "facingAngle": -1.1,
+      "duration": 9.0,
+      "zone": "west"
+    },
+    {
+      "name": "East Outpost North",
+      "description": "Checking the north-east cabin",
+      "spot": [
+        33.0,
+        0.0,
+        -13.0
+      ],
+      "facingAngle": 1.5,
+      "duration": 8.0,
+      "zone": "east"
+    },
+    {
+      "name": "East Trading Depot",
+      "description": "Inspecting cargo at the east depot",
+      "spot": [
+        38.0,
+        0.0,
+        3.0
+      ],
+      "facingAngle": 1.57,
+      "duration": 9.0,
+      "zone": "east"
+    },
+    {
+      "name": "East Water Tower",
+      "description": "Resting by the east water tower",
+      "spot": [
+        33.5,
+        0.0,
+        16.0
+      ],
+      "facingAngle": 1.4,
+      "duration": 8.0,
+      "zone": "east"
+    },
+    {
+      "name": "East Cabin Yard",
+      "description": "Strolling near the east ranch house",
+      "spot": [
+        37.5,
+        0.0,
+        26.0
+      ],
+      "facingAngle": 1.57,
+      "duration": 8.0,
+      "zone": "east"
+    },
+    {
+      "name": "East Windmill Trail",
+      "description": "Walking past the east windmill",
+      "spot": [
+        34.5,
+        0.0,
+        37.0
+      ],
+      "facingAngle": 1.3,
+      "duration": 9.0,
+      "zone": "east"
+    },
+    {
+      "name": "East Ranch Well",
+      "description": "Drawing water at the south-east well",
+      "spot": [
+        35.0,
+        0.0,
+        50.0
+      ],
+      "facingAngle": 1.57,
+      "duration": 9.0,
+      "zone": "east"
     }
   ],
   "staticBoxes": [

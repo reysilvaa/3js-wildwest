@@ -5,7 +5,7 @@ export function getGroundHeightOnly(
   z: number,
   tcX = 10,
   tcZ = -5,
-  flatRadius = 50
+  flatRadius = 85
 ): number {
   const dist = Math.hypot(x - tcX, z - tcZ);
   if (dist < flatRadius) return 0.0;
@@ -30,7 +30,7 @@ export function getGroundElevation(
   z: number,
   tcX = 10,
   tcZ = -5,
-  flatRadius = 50
+  flatRadius = 85
 ): { height: number; normal: THREE.Vector3 } {
   const height = getGroundHeightOnly(x, z, tcX, tcZ, flatRadius);
   const eps = 0.2;
