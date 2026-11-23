@@ -50,9 +50,12 @@ export function initWeather(
 ): WeatherSystem {
   let timeOfDay: TimeOfDay = options.initialTime ?? "day";
   let condition: WeatherCondition = options.initialCondition ?? "clear";
-  let autoCycle = options.autoCycle ?? false;
+  let autoCycle = options.autoCycle ?? true;
   let cycleTimer = 0;
   let currentIndoorLight = 0;
+  const nextRainDelay = (c: WeatherCondition) =>
+    c === "rain" ? 25 + Math.random() * 35 : 40 + Math.random() * 65;
+  let rainTimer = nextRainDelay(condition);
 
   const sunMoon: SunMoonSystem = initSunMoon(scene, options.camera, options.buildingBoxes);
   const rain: RainSystem = initRain(scene, options.onThunder);
@@ -145,6 +148,7 @@ export function initWeather(
 
   function setCondition(c: WeatherCondition) {
     condition = c;
+    rainTimer = nextRainDelay(condition);
     options.onConditionChange?.(condition);
     ui.update(timeOfDay, condition, autoCycle);
   }
@@ -175,6 +179,7 @@ export function initWeather(
     onToggleMute: options.onToggleMute,
     isMuted: options.isMuted,
   });
+  ui.update(timeOfDay, condition, autoCycle);
 
   function update(dt: number) {
     if (autoCycle) {
@@ -188,6 +193,16 @@ export function initWeather(
         timeOfDay = newTime;
         ui.update(timeOfDay, condition, autoCycle);
         options.onTimeChange?.(timeOfDay);
+      }
+    }
+
+    rainTimer -= dt;
+    if (rainTimer <= 0) {
+      if (condition === "clear") {
+        if (Math.random() < 0.55) setCondition("rain");
+        else rainTimer = nextRainDelay("clear");
+      } else {
+        setCondition("clear");
       }
     }
 
