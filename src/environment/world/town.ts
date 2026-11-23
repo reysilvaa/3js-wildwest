@@ -170,11 +170,11 @@ export function loadWorld(
             const wholeBox = new THREE.Box3().setFromObject(model);
             if (wholeBox.max.y - wholeBox.min.y > 0.25) {
               if (isBuilding) {
-                // Keep outer boardwalk walkable while solid building walls block NPCs
-                wholeBox.min.x += 0.4;
-                wholeBox.max.x -= 0.4;
-                wholeBox.min.z += 0.4;
-                wholeBox.max.z -= 0.4;
+                // Keep outer boardwalk & door entry clear while solid building core blocks NPCs
+                wholeBox.min.x += 0.75;
+                wholeBox.max.x -= 0.75;
+                wholeBox.min.z += 0.75;
+                wholeBox.max.z -= 0.75;
               }
               buildingBoxes.push(wholeBox);
               CollisionWorld.getInstance().addBox(wholeBox);

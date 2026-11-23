@@ -117,12 +117,12 @@ export class NPCNavigator {
 
     if (dist > 0.0001) this._steerDir.divideScalar(dist);
     this._avoid.set(0, 0, 0);
-    const visionRange = 3.6;
+    const visionRange = 4.2;
 
-    // 1. Pedestrian Right-Hand-Passing Lateral Steering
+    // 1. Pedestrian Right-Hand-Passing + Close-Range Personal Space Repulsion
     for (let i = 0; i < otherEntities.length; i++) {
       const other = otherEntities[i]!;
-      if (other.id === selfId) continue;
+      if (other.id === selfId || (other.isPaused && other.isPaused())) continue;
 
       const oPos = other.getPosition();
       this._toOther.set(oPos.x - currentPos.x, 0, oPos.z - currentPos.z);
@@ -130,11 +130,17 @@ export class NPCNavigator {
 
       if (distToOther < visionRange && distToOther > 0.01) {
         this._toOther.divideScalar(distToOther);
-        if (this._steerDir.dot(this._toOther) > 0.15) {
+        const dot = this._steerDir.dot(this._toOther);
+        // Hard close-range repulsion (< 2.0m) from any angle prevents head-on collisions
+        if (distToOther < 2.0) {
+          const push = (2.0 - distToOther) / 2.0;
+          this._avoid.addScaledVector(this._toOther, -push * 4.5);
+        }
+        if (dot > 0.05) {
           this._right.set(-this._steerDir.z, 0, this._steerDir.x);
           const steerSign = this._toOther.dot(this._right) > 0 ? -1 : 1;
           const urgency = (visionRange - distToOther) / visionRange;
-          this._avoid.addScaledVector(this._right, steerSign * urgency * 2.8);
+          this._avoid.addScaledVector(this._right, steerSign * urgency * 4.0);
         }
       }
     }

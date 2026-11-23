@@ -158,6 +158,7 @@ export class NPC implements NPCController {
   private state: NPCState = "ACTIVITY";
   private stateTimer = 0.6 + Math.random() * 4.5;
   private stuckTimer = 0;
+  private readonly lastProgressPos = new THREE.Vector3();
   private pauseTimer = 0;
   private faceTimer = 0;
   private forcedFaceTarget: THREE.Vector3 | null = null;
@@ -478,13 +479,22 @@ export class NPC implements NPCController {
 
         if (!this.collisionWorld.checkPointCollision(this._tmpNext, 0.46)) {
           this.currentPos.copy(this._tmpNext);
-          this.stuckTimer = 0;
           this.fadeToAction("Walk", 0.2);
         } else {
-          this.stuckTimer += dt;
           this.fadeToAction("Idle", 0.2);
-          if (steering.isBlocked || this.stuckTimer > 1.5) {
+          if (steering.isBlocked) {
             this.stuckTimer = 0;
+            this.advanceToNextActivity();
+          }
+        }
+
+        // True displacement stuck detector (catches wall-pushback walking in place)
+        this.stuckTimer += dt;
+        if (this.stuckTimer >= 1.1) {
+          const moved = this.currentPos.distanceTo(this.lastProgressPos);
+          this.lastProgressPos.copy(this.currentPos);
+          this.stuckTimer = 0;
+          if (moved < 0.30) {
             this.advanceToNextActivity();
           }
         }

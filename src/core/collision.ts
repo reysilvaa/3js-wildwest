@@ -116,43 +116,40 @@ export class CollisionWorld {
   public resolveEntitySeparation(entities: SeparableEntity[], minDist = 1.4): void {
     const minDistSq = minDist * minDist;
 
-    for (let i = 0; i < entities.length; i++) {
-      const a = entities[i];
-      if (!a) continue;
-      const posA = a.getPosition();
+    for (let pass = 0; pass < 2; pass++) {
+      for (let i = 0; i < entities.length; i++) {
+        const a = entities[i];
+        if (!a || (a.isPaused && a.isPaused())) continue;
+        const posA = a.getPosition();
 
-      for (let j = i + 1; j < entities.length; j++) {
-        const b = entities[j];
-        if (!b) continue;
-        const posB = b.getPosition();
+        for (let j = i + 1; j < entities.length; j++) {
+          const b = entities[j];
+          if (!b || (b.isPaused && b.isPaused())) continue;
+          const posB = b.getPosition();
 
-        const dx = posA.x - posB.x;
-        const dz = posA.z - posB.z;
-        const dSq = dx * dx + dz * dz;
+          const dx = posA.x - posB.x;
+          const dz = posA.z - posB.z;
+          const dSq = dx * dx + dz * dz;
 
-        if (dSq < minDistSq && dSq > 0.00001) {
-          const d = Math.sqrt(dSq);
-          const overlap = minDist - d;
-          const nx = dx / d;
-          const nz = dz / d;
+          if (dSq < minDistSq && dSq > 0.00001) {
+            const d = Math.sqrt(dSq);
+            const overlap = minDist - d;
+            const nx = dx / d;
+            const nz = dz / d;
 
-          const aPaused = a.isPaused ? a.isPaused() : false;
-          const bPaused = b.isPaused ? b.isPaused() : false;
-          const weightA = bPaused ? 0.0 : aPaused ? 1.0 : 0.5;
-          const weightB = 1.0 - weightA;
+            posA.x += nx * overlap * 0.5;
+            posA.z += nz * overlap * 0.5;
+            posB.x -= nx * overlap * 0.5;
+            posB.z -= nz * overlap * 0.5;
 
-          posA.x += nx * overlap * weightA;
-          posA.z += nz * overlap * weightA;
-          posB.x -= nx * overlap * weightB;
-          posB.z -= nz * overlap * weightB;
-
-          if (a.model) {
-            a.model.root.position.x = posA.x;
-            a.model.root.position.z = posA.z;
-          }
-          if (b.model) {
-            b.model.root.position.x = posB.x;
-            b.model.root.position.z = posB.z;
+            if (a.model) {
+              a.model.root.position.x = posA.x;
+              a.model.root.position.z = posA.z;
+            }
+            if (b.model) {
+              b.model.root.position.x = posB.x;
+              b.model.root.position.z = posB.z;
+            }
           }
         }
       }
