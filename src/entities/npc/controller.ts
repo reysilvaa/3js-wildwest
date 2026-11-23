@@ -4,8 +4,9 @@ import { getGroundElevation } from "../../environment/terrain/height.js";
 import { CollisionWorld, type SeparableEntity } from "../../core/collision.js";
 import { NPCNavigator } from "./navigator.js";
 import { getModelsManifest, loadGLTF } from "../../environment/assets.js";
+import { triggerBuildingDoor, type InteractiveBuilding } from "../../environment/world/town.js";
 
-export type NPCState = "IDLE" | "WALK" | "GREET" | "ACTIVITY";
+export type NPCState = "IDLE" | "WALK" | "GREET" | "ACTIVITY" | "ENTERING" | "INDOORS" | "EXITING";
 
 export type NPCZone = "center" | "south" | "west" | "east";
 
@@ -36,6 +37,7 @@ export interface NPCOptions {
   stationary?: boolean;
   facingAngle?: number;
   startActivityIndex?: number;
+  getBuildings?: () => readonly InteractiveBuilding[];
 }
 
 export interface NPCController extends SeparableEntity {
@@ -159,6 +161,9 @@ export class NPC implements NPCController {
   private pauseTimer = 0;
   private faceTimer = 0;
   private forcedFaceTarget: THREE.Vector3 | null = null;
+  private targetBuilding: InteractiveBuilding | null = null;
+  private portraitUrl = "/models/npc/portraits/npc_001.png";
+  private baseScale = 0.85;
 
   private currentActivityIndex: number;
   private readonly activities: TownActivity[] = [];
@@ -226,6 +231,7 @@ export class NPC implements NPCController {
 
   public async loadModel(scene: THREE.Scene): Promise<NPCModel> {
     const scale = this.options.scale ?? 0.85;
+    this.baseScale = scale;
     const randConfig = await getRandomModularConfig(this.options.modelIndex);
 
     let accessoryUrl = randConfig.accessoryUrl;
@@ -237,6 +243,9 @@ export class NPC implements NPCController {
 
     const finalColor = this.options.outfitColor ?? randConfig.outfitColor;
     const resolvedModelUrl = this.options.modelUrl ?? randConfig.modelUrl;
+    this.portraitUrl = resolvedModelUrl
+      .replace("/characters/", "/portraits/")
+      .replace(/\.glb$/i, ".png");
 
     const modelObj = await assembleModularCharacter(
       {
@@ -312,7 +321,68 @@ export class NPC implements NPCController {
 
   public update(dt: number): void {
     if (!this.model) return;
+
+    if (this.state === "INDOORS") {
+      this.stateTimer -= dt;
+      if (this.stateTimer <= 0 && this.targetBuilding) {
+        const b = this.targetBuilding;
+        triggerBuildingDoor(b, 2.4);
+        const idx = b.occupants.findIndex((o) => o.id === this.id);
+        if (idx >= 0) b.occupants.splice(idx, 1);
+        this.currentPos.set(b.doorPos.x, b.entryPos.y, b.doorPos.z);
+        this.model.root.position.copy(this.currentPos);
+        this.model.root.scale.setScalar(this.baseScale);
+        this._tmpDir.subVectors(b.entryPos, this.currentPos);
+        this._tmpDir.y = 0;
+        if (this._tmpDir.lengthSq() > 0.001) {
+          this.targetRotation.setFromAxisAngle(this.yAxis, Math.atan2(this._tmpDir.x, this._tmpDir.z));
+          this.model.root.quaternion.copy(this.targetRotation);
+        }
+        this.model.root.visible = true;
+        this.state = "EXITING";
+        this.stateTimer = 2.6;
+        this.fadeToAction("Walk", 0.15);
+      }
+      return;
+    }
+
     this.model.update(dt);
+
+    if ((this.state === "ENTERING" || this.state === "EXITING") && this.targetBuilding) {
+      this.stateTimer -= dt;
+      const b = this.targetBuilding;
+      const goal = this.state === "ENTERING" ? b.doorPos : b.entryPos;
+      this._tmpDir.set(goal.x - this.currentPos.x, 0, goal.z - this.currentPos.z);
+      const dist = this._tmpDir.length();
+      const speed = this.options.walkSpeed ?? 1.15;
+
+      if (dist > 0.05) {
+        this._tmpDir.divideScalar(dist);
+        this.targetRotation.setFromAxisAngle(this.yAxis, Math.atan2(this._tmpDir.x, this._tmpDir.z));
+        this.model.root.quaternion.slerp(this.targetRotation, Math.min(1, 8 * dt));
+        const step = Math.min(dist, speed * dt);
+        this.currentPos.x += this._tmpDir.x * step;
+        this.currentPos.z += this._tmpDir.z * step;
+      }
+      this.currentPos.y = getGroundElevation(this.currentPos.x, this.currentPos.z).height;
+      this.model.root.position.copy(this.currentPos);
+      this.fadeToAction("Walk", 0.15);
+
+      if (dist < 0.35 || this.stateTimer <= 0) {
+        if (this.state === "ENTERING") {
+          this.model.root.visible = false;
+          if (!b.occupants.some((o) => o.id === this.id)) {
+            b.occupants.push({ id: this.id, name: this.name, portraitUrl: this.portraitUrl });
+          }
+          this.state = "INDOORS";
+          this.stateTimer = 8.0 + Math.random() * 10.0;
+        } else {
+          this.targetBuilding = null;
+          this.advanceToNextActivity();
+        }
+      }
+      return;
+    }
 
     if (this.pauseTimer > 0) {
       this.pauseTimer -= dt;
@@ -387,6 +457,13 @@ export class NPC implements NPCController {
       );
 
       if (steering.isArrived) {
+        if (this.targetBuilding) {
+          triggerBuildingDoor(this.targetBuilding, 2.6);
+          this.state = "ENTERING";
+          this.stateTimer = 2.6;
+          this.fadeToAction("Walk", 0.15);
+          return;
+        }
         this.state = "ACTIVITY";
         this.fadeToAction("Idle", 0.35);
         const curAct = this.activities[this.currentActivityIndex];
@@ -418,6 +495,22 @@ export class NPC implements NPCController {
   }
 
   private advanceToNextActivity(): void {
+    const buildings = this.options.getBuildings?.();
+    if (buildings && buildings.length > 0 && Math.random() < 0.38) {
+      const available = buildings.filter((b) => b.occupants.length < 4);
+      const nearby = available.filter((b) => b.entryPos.distanceTo(this.currentPos) < 42);
+      const pool = nearby.length > 0 ? nearby : available;
+      if (pool.length > 0) {
+        const chosen = pool[Math.floor(Math.random() * pool.length)]!;
+        this.targetBuilding = chosen;
+        this.navigator.planPath(this.currentPos, chosen.entryPos);
+        this.state = "WALK";
+        this.fadeToAction("Walk", 0.35);
+        return;
+      }
+    }
+    this.targetBuilding = null;
+
     if (this.activities.length === 0) return;
 
     const occupiedIndices = new Set<number>();
@@ -505,6 +598,6 @@ export class NPC implements NPCController {
   }
 
   public isPaused(): boolean {
-    return this.pauseTimer > 0;
+    return this.pauseTimer > 0 || this.state === "INDOORS" || this.state === "ENTERING" || this.state === "EXITING";
   }
 }

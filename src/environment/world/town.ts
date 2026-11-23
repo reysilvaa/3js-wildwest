@@ -17,9 +17,32 @@ export interface WorldOptions {
   onLoad?: (root: THREE.Group, bounds: THREE.Box3) => void;
 }
 
+export interface BuildingOccupant {
+  readonly id: string;
+  readonly name: string;
+  readonly portraitUrl: string;
+}
+
+export interface InteractiveBuilding {
+  readonly id: string;
+  readonly label: string;
+  readonly entryPos: THREE.Vector3;
+  readonly doorPos: THREE.Vector3;
+  readonly roofPos: THREE.Vector3;
+  readonly doorPivot: THREE.Object3D;
+  readonly occupants: BuildingOccupant[];
+  openTimer: number;
+  openAngle: number;
+}
+
+export function triggerBuildingDoor(building: InteractiveBuilding, duration = 1.8): void {
+  building.openTimer = Math.max(building.openTimer, duration);
+}
+
 export interface WorldContext {
   update: (dt: number) => void;
   setIndoorLighting: (intensity: number) => void;
+  getBuildings: () => readonly InteractiveBuilding[];
 }
 
 const BUILDING_ASSETS = new Set([
@@ -45,6 +68,7 @@ export function loadWorld(
   scene.add(townRoot);
 
   const windmillBladesList: THREE.Object3D[] = [];
+  const buildings: InteractiveBuilding[] = [];
   const windowMaterials: THREE.MeshStandardMaterial[] = [];
   const porchLights: THREE.PointLight[] = [];
 
@@ -154,6 +178,35 @@ export function loadWorld(
               }
               buildingBoxes.push(wholeBox);
               CollisionWorld.getInstance().addBox(wholeBox);
+
+              if (isBuilding) {
+                const doorPivot = model.getObjectByName("DoorPivot");
+                const doorEntry = model.getObjectByName("DoorEntry");
+                if (doorPivot && doorEntry) {
+                  const entryPos = new THREE.Vector3();
+                  const doorPos = new THREE.Vector3();
+                  doorEntry.getWorldPosition(entryPos);
+                  doorPivot.getWorldPosition(doorPos);
+                  entryPos.y = getGroundHeightOnly(entryPos.x, entryPos.z);
+
+                  const roofPos = new THREE.Vector3(
+                    (wholeBox.min.x + wholeBox.max.x) * 0.5,
+                    wholeBox.max.y + 1.1,
+                    (wholeBox.min.z + wholeBox.max.z) * 0.5
+                  );
+                  buildings.push({
+                    id: inst.name ?? `${inst.asset}_${buildings.length}`,
+                    label: inst.asset.toUpperCase(),
+                    entryPos,
+                    doorPos,
+                    roofPos,
+                    doorPivot,
+                    occupants: [],
+                    openTimer: 0,
+                    openAngle: 0,
+                  });
+                }
+              }
             }
           }
 
@@ -231,6 +284,16 @@ export function loadWorld(
     for (let i = 0; i < windmillBladesList.length; i++) {
       windmillBladesList[i]!.rotateY(spin);
     }
+    const doorStep = Math.min(1, 7.5 * dt);
+    for (let i = 0; i < buildings.length; i++) {
+      const b = buildings[i]!;
+      if (b.openTimer > 0) b.openTimer = Math.max(0, b.openTimer - dt);
+      const targetAngle = b.openTimer > 0 ? 1.45 : 0;
+      if (Math.abs(b.openAngle - targetAngle) > 0.002) {
+        b.openAngle += (targetAngle - b.openAngle) * doorStep;
+        b.doorPivot.rotation.y = b.openAngle;
+      }
+    }
   }
 
   function setIndoorLighting(factor: number): void {
@@ -254,6 +317,6 @@ export function loadWorld(
     }
   }
 
-  return { update, setIndoorLighting };
+  return { update, setIndoorLighting, getBuildings: () => buildings };
 }
 

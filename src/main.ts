@@ -9,6 +9,7 @@ import { initClouds } from "./environment/weather/clouds.js";
 import { initWeather } from "./environment/weather/weather.js";
 import { initNPC, resolveNPCCollisions } from "./entities/npc/npc.js";
 import { initBubbleChat } from "./ui/bubble-chat.js";
+import { initBuildingPanels } from "./ui/building-panel.js";
 import { initConversationManager } from "./entities/npc/conversation.js";
 import { initTumbleweeds } from "./entities/tumbleweed.js";
 
@@ -108,10 +109,12 @@ const npcs = NPC_SPAWNS.map((spawn, i) =>
     walkSpeed: 1.02 + (i % 4) * 0.04,
     stationary: false,
     startActivityIndex: i,
+    getBuildings: world.getBuildings,
   })
 );
 
 const bubbleChat = initBubbleChat({ camera, headOffsetY: 1.45 });
+const buildingPanels = initBuildingPanels(world.getBuildings);
 const conversations = initConversationManager(npcs, bubbleChat);
 
 (window as unknown as Record<string, unknown>).triggerConversation = (i = 0, j = 1) => {
@@ -137,6 +140,7 @@ function animate() {
   resolveNPCCollisions(npcs);
   conversations.update(dt);
   bubbleChat.update(camera, dt);
+  buildingPanels.update(camera);
   tumbleweeds.update(dt, buildingBoxes);
   clouds.update(dt, weather.getState());
   controls.update();
