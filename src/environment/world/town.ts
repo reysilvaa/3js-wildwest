@@ -1,12 +1,14 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { loadAsset, AssetKey } from "../assets.js";
+import { getModelsManifest, loadAsset, AssetKey } from "../assets.js";
 import { getGroundHeightOnly } from "../terrain/height.js";
 import { CollisionWorld } from "../../core/collision.js";
 
 export interface TownInstance {
   asset: AssetKey;
   name?: string;
+  label?: string;
+  solid?: boolean;
   pos: [number, number, number];
   rot: [number, number, number, number];
   scale?: [number, number, number];
@@ -45,15 +47,6 @@ export interface WorldContext {
   setIndoorLighting: (intensity: number) => void;
   getBuildings: () => readonly InteractiveBuilding[];
 }
-
-const BUILDING_ASSETS = new Set([
-  "hotel", "saloon", "bank", "sheriff", "store",
-  "office", "depot", "house", "settlement", "water_tower", "windmill",
-]);
-const SOLID_OBSTACLE_ASSETS = new Set([
-  ...BUILDING_ASSETS,
-  "cart", "well", "fence", "crates", "bench", "hitching_post",
-]);
 
 export function loadWorld(
   scene: THREE.Scene,
@@ -117,6 +110,8 @@ export function loadWorld(
       return res.json() as Promise<TownInstance[]>;
     })
     .then(async (instances) => {
+      const manifest = await getModelsManifest();
+      const buildingAssets = new Set([...Object.keys(manifest.buildings), ...Object.keys(manifest.structures)]);
       const total = instances.length;
       let loaded = 0;
       // Parallel pre-warm unique GLBs instead of 20-step sequential network waterfall
@@ -141,8 +136,8 @@ export function loadWorld(
             if (blades) windmillBladesList.push(blades);
           }
 
-          const isBuilding = BUILDING_ASSETS.has(inst.asset);
-          const isSolid = SOLID_OBSTACLE_ASSETS.has(inst.asset);
+          const isBuilding = buildingAssets.has(inst.asset);
+          const isSolid = inst.solid ?? isBuilding;
 
           if (isSolid) {
             const wholeBox = new THREE.Box3().setFromObject(model);
@@ -200,7 +195,7 @@ export function loadWorld(
                 model.userData.buildingId = bldgId;
                 buildings.push({
                   id: bldgId,
-                  label: inst.asset.toUpperCase(),
+                  label: inst.label ?? inst.asset.toUpperCase(),
                   root: model,
                   entryPos,
                   doorPos,
