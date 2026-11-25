@@ -8,15 +8,19 @@ const MIN_GLB_BYTES = 1024;
 function scanGlbs(relDir) {
   const fullDir = path.join(MODELS_DIR, relDir);
   if (!fs.existsSync(fullDir)) return [];
-  return fs
-    .readdirSync(fullDir)
-    .filter((f) => f.toLowerCase().endsWith(".glb"))
-    .filter((f) => fs.statSync(path.join(fullDir, f)).size >= MIN_GLB_BYTES)
-    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-    .map((f) => ({
-      key: path.basename(f, path.extname(f)),
-      url: `/models/${relDir.replace(/\\/g, "/")}/${f}`,
-    }));
+  const entries = [];
+  for (const dirent of fs.readdirSync(fullDir, { withFileTypes: true })) {
+    const subRel = `${relDir.replace(/\\/g, "/")}/${dirent.name}`;
+    if (dirent.isDirectory()) {
+      entries.push(...scanGlbs(subRel));
+    } else if (dirent.name.toLowerCase().endsWith(".glb")) {
+      const fullPath = path.join(fullDir, dirent.name);
+      if (fs.statSync(fullPath).size >= MIN_GLB_BYTES) {
+        entries.push({ key: path.basename(dirent.name, path.extname(dirent.name)), url: `/models/${subRel}` });
+      }
+    }
+  }
+  return entries.sort((a, b) => a.key.localeCompare(b.key, undefined, { numeric: true }));
 }
 
 function toRecord(entries) {

@@ -1,6 +1,6 @@
 [
   {
-    "asset": "hotel",
+    "asset": "church_001",
     "name": "Cube.008",
     "pos": [
       10.5459,
@@ -21,7 +21,7 @@
     "label": "CHURCH"
   },
   {
-    "asset": "saloon",
+    "asset": "hotel_001",
     "name": "Cube.003",
     "pos": [
       24,
@@ -42,7 +42,7 @@
     "label": "HOTEL"
   },
   {
-    "asset": "bank",
+    "asset": "saloon_001",
     "name": "Cube.004",
     "pos": [
       -4,
@@ -63,7 +63,7 @@
     "label": "SALOON"
   },
   {
-    "asset": "sheriff",
+    "asset": "homestead_001",
     "name": "Cube.007",
     "pos": [
       21.3881,
@@ -84,7 +84,7 @@
     "label": "HOMESTEAD"
   },
   {
-    "asset": "store",
+    "asset": "store_001",
     "name": "Cube.009",
     "pos": [
       21.3881,
@@ -105,7 +105,7 @@
     "label": "GENERAL STORE"
   },
   {
-    "asset": "office",
+    "asset": "saloon_002",
     "name": "Cube.010",
     "pos": [
       20.361,
@@ -126,7 +126,7 @@
     "label": "SALOON"
   },
   {
-    "asset": "depot",
+    "asset": "sheriff_001",
     "name": "Cube.112",
     "pos": [
       -4,
@@ -147,7 +147,7 @@
     "label": "SHERIFF"
   },
   {
-    "asset": "house",
+    "asset": "bank_001",
     "name": "Cube.217",
     "pos": [
       -3.9646,
@@ -168,7 +168,7 @@
     "label": "BANK"
   },
   {
-    "asset": "settlement",
+    "asset": "settlement_001",
     "name": "Church_Settlement_Complex",
     "pos": [
       -0.0664,
@@ -721,7 +721,7 @@
     "solid": true
   },
   {
-    "asset": "house",
+    "asset": "bank_001",
     "name": "Exp_SouthW_House1",
     "pos": [
       -4.8,
@@ -742,7 +742,7 @@
     "label": "BANK"
   },
   {
-    "asset": "office",
+    "asset": "saloon_002",
     "name": "Exp_SouthW_Office",
     "pos": [
       -6.2,
@@ -763,7 +763,7 @@
     "label": "SALOON"
   },
   {
-    "asset": "saloon",
+    "asset": "hotel_001",
     "name": "Exp_SouthW_Saloon",
     "pos": [
       -7.8,
@@ -784,7 +784,7 @@
     "label": "HOTEL"
   },
   {
-    "asset": "house",
+    "asset": "bank_001",
     "name": "Exp_SouthW_House2",
     "pos": [
       -9.2,
@@ -805,7 +805,7 @@
     "label": "BANK"
   },
   {
-    "asset": "house",
+    "asset": "bank_001",
     "name": "Exp_SouthE_House1",
     "pos": [
       24.8,
@@ -826,7 +826,7 @@
     "label": "BANK"
   },
   {
-    "asset": "store",
+    "asset": "store_001",
     "name": "Exp_SouthE_Store",
     "pos": [
       23,
@@ -847,7 +847,7 @@
     "label": "GENERAL STORE"
   },
   {
-    "asset": "bank",
+    "asset": "saloon_001",
     "name": "Exp_SouthE_Bank",
     "pos": [
       26.8,
@@ -868,7 +868,7 @@
     "label": "SALOON"
   },
   {
-    "asset": "house",
+    "asset": "bank_001",
     "name": "Exp_SouthE_House2",
     "pos": [
       28,
@@ -889,7 +889,7 @@
     "label": "BANK"
   },
   {
-    "asset": "house",
+    "asset": "bank_001",
     "name": "Exp_West_House1",
     "pos": [
       -30.5,
@@ -910,7 +910,7 @@
     "label": "BANK"
   },
   {
-    "asset": "house",
+    "asset": "bank_001",
     "name": "Exp_West_House2",
     "pos": [
       -37,
@@ -931,7 +931,7 @@
     "label": "BANK"
   },
   {
-    "asset": "office",
+    "asset": "saloon_002",
     "name": "Exp_West_Office",
     "pos": [
       -31.5,
@@ -952,7 +952,7 @@
     "label": "SALOON"
   },
   {
-    "asset": "house",
+    "asset": "bank_001",
     "name": "Exp_West_House3",
     "pos": [
       -38.5,
@@ -973,7 +973,7 @@
     "label": "BANK"
   },
   {
-    "asset": "house",
+    "asset": "bank_001",
     "name": "Exp_East_House1",
     "pos": [
       44,
@@ -994,7 +994,7 @@
     "label": "BANK"
   },
   {
-    "asset": "depot",
+    "asset": "sheriff_001",
     "name": "Exp_East_Depot",
     "pos": [
       49.5,
@@ -1015,7 +1015,7 @@
     "label": "SHERIFF"
   },
   {
-    "asset": "house",
+    "asset": "bank_001",
     "name": "Exp_East_House2",
     "pos": [
       46.5,
@@ -1036,7 +1036,7 @@
     "label": "BANK"
   },
   {
-    "asset": "house",
+    "asset": "bank_001",
     "name": "Exp_East_House3",
     "pos": [
       48,

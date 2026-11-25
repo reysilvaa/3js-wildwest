@@ -17,9 +17,9 @@ export interface InspectorOptions {
 type Target = { kind: "npc"; npc: NPCController } | { kind: "building"; building: InteractiveBuilding } | null;
 
 const CSS = `
-.insp-tip{position:fixed;left:0;top:0;z-index:60;pointer-events:none;display:none;align-items:center;gap:6px;padding:5px 10px;border-radius:4px;background:rgba(244,232,200,.94);border:1.5px solid #7d1214;box-shadow:0 6px 16px rgba(0,0,0,.55);font:800 12px 'Cinzel',Georgia,serif;color:#2c1810;white-space:nowrap;will-change:transform}
-.insp-tip small{font:600 11px Georgia,serif;color:#84181a}
-.insp-drawer{position:fixed;top:16px;right:16px;bottom:16px;z-index:65;width:320px;max-width:calc(100vw - 32px);display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:6px;background:linear-gradient(170deg,#f5e8c8 0%,#e3c894 100%);border:2px solid #7d1214;box-shadow:-10px 14px 36px rgba(0,0,0,.72),inset 0 0 0 1px rgba(203,160,67,.55);color:#2c1810;font-family:Georgia,serif;transform:translateX(calc(100% + 28px));opacity:0;pointer-events:none;transition:transform .24s cubic-bezier(.22,1,.36,1),opacity .2s ease;overflow-y:auto}
+.insp-tip{position:fixed;left:0;top:0;z-index:60;pointer-events:none;display:none;flex-direction:column;align-items:center;gap:2px;min-width:128px;padding:12px 20px 26px 20px;background:url("/ui/bubble-frame.png") center/100% 100% no-repeat;filter:drop-shadow(0 12px 24px rgba(0,0,0,.78));font:900 12px/1.1 'Cinzel','Rye',Georgia,serif;color:#84181a;letter-spacing:.07em;text-transform:uppercase;text-shadow:0 1px 0 rgba(255,245,220,.75);white-space:nowrap;will-change:transform}
+.insp-tip small{font:700 10.5px/1.1 Georgia,serif;color:#2c1810;letter-spacing:.02em;text-transform:none;text-shadow:0 1px 0 rgba(255,245,220,.6)}
+.insp-drawer{position:fixed;top:16px;right:16px;bottom:16px;z-index:65;width:336px;max-width:calc(100vw - 32px);display:flex;flex-direction:column;gap:12px;padding:34px 30px 30px;border:none;border-radius:6px;background:url("/ui/detail-panel-frame.jpg") center/100% 100% no-repeat;box-shadow:-10px 14px 36px rgba(0,0,0,.78);color:#2c1810;font-family:Georgia,serif;transform:translateX(calc(100% + 28px));opacity:0;pointer-events:none;transition:transform .24s cubic-bezier(.22,1,.36,1),opacity .2s ease;overflow-y:auto}
 .insp-drawer.open{transform:translateX(0);opacity:1;pointer-events:auto}
 .insp-stage{position:relative;width:100%;aspect-ratio:1/1;flex-shrink:0;border-radius:5px;overflow:hidden;border:1.5px solid #7d1214;background:radial-gradient(circle at 50% 42%,#3b2618 0%,#1a100a 100%);box-shadow:inset 0 0 24px rgba(0,0,0,.65);cursor:grab}
 .insp-stage:active{cursor:grabbing}
@@ -40,11 +40,11 @@ const CSS = `
 .insp-occ{display:flex;flex-wrap:wrap;gap:6px;padding:8px;border-radius:4px;background:rgba(44,24,16,.08)}
 .insp-chip{display:flex;align-items:center;gap:5px;padding:3px 8px 3px 3px;border-radius:99px;border:1.5px solid #7d1214;background:#f8edd2;cursor:pointer;color:#2c1810;font:700 11px Georgia,serif}
 .insp-chip img{width:22px;height:22px;border-radius:50%;object-fit:cover;border:1px solid #7d1214}
-.insp-acts{display:flex;gap:8px;margin-top:auto;padding-top:6px}
-.insp-btn{flex:1;padding:8px;border-radius:4px;cursor:pointer;border:1.5px solid #7d1214;background:#2c1810;color:#f5e8c8;font:800 11px 'Cinzel',Georgia,serif;text-transform:uppercase;letter-spacing:.05em}
-.insp-btn:hover{background:#84181a}
-.insp-btn.alt{background:rgba(44,24,16,.12);color:#2c1810}
-.insp-btn.alt:hover{background:rgba(125,18,20,.2)}
+.insp-acts{display:flex;gap:10px;margin-top:auto;padding-top:10px;border-top:1px solid rgba(125,18,20,.25)}
+.insp-btn{flex:1;padding:10px 12px;border-radius:3px;border:1.5px solid #4a0a0c;background:linear-gradient(180deg,#8d1a1c,#670f11);box-shadow:0 3px 8px rgba(44,24,16,.38),inset 0 0 0 1px rgba(203,160,67,.42);cursor:pointer;color:#f7ebd0;font:800 11px/1.1 'Cinzel',Georgia,serif;text-transform:uppercase;letter-spacing:.08em;text-shadow:0 1px 2px rgba(0,0,0,.55);transition:filter .12s ease,transform .12s ease}
+.insp-btn:hover{filter:brightness(1.12);transform:translateY(-1px)}
+.insp-btn:active{transform:translateY(0);filter:brightness(.95)}
+.insp-btn.alt{border-color:#2c1810;background:linear-gradient(180deg,#3b2317,#24130b);color:#f3e2bc}
 `;
 
 export function initInspector({ scene, camera, controls, domElement, npcs, getBuildings, onTalk }: InspectorOptions) {
@@ -268,7 +268,7 @@ export function initInspector({ scene, camera, controls, domElement, npcs, getBu
 
   domElement.addEventListener("pointermove", (e) => {
     px = e.clientX; py = e.clientY;
-    if (hovered) tip.style.transform = `translate3d(${px + 14}px,${py - 12}px,0)`;
+    if (hovered) tip.style.transform = `translate3d(${px}px,${py - 6}px,0) translate(-13.27%,-100%)`;
     const now = performance.now();
     if (now - lastMove < 60) return;
     lastMove = now;
@@ -276,10 +276,10 @@ export function initInspector({ scene, camera, controls, domElement, npcs, getBu
     domElement.style.cursor = hovered ? "pointer" : "";
     if (!hovered) { tip.style.display = "none"; return; }
     tip.innerHTML = hovered.kind === "npc"
-      ? `${hovered.npc.name} <small>· ${hovered.npc.getState()}</small>`
-      : `${hovered.building.label} <small>· ${hovered.building.occupants.length ? `${hovered.building.occupants.length} inside` : "Building"}</small>`;
+      ? `<span>${hovered.npc.name}</span><small>${hovered.npc.getState()} · ${hovered.npc.getCurrentActivity()}</small>`
+      : `<span>${hovered.building.label}</span><small>${hovered.building.occupants.length ? `${hovered.building.occupants.length} inside` : "Click to inspect"}</small>`;
     tip.style.display = "flex";
-    tip.style.transform = `translate3d(${px + 14}px,${py - 12}px,0)`;
+    tip.style.transform = `translate3d(${px}px,${py - 6}px,0) translate(-13.27%,-100%)`;
   });
   domElement.addEventListener("pointerleave", () => { hovered = null; domElement.style.cursor = ""; tip.style.display = "none"; });
   domElement.addEventListener("pointerdown", (e) => { dx = e.clientX; dy = e.clientY; });

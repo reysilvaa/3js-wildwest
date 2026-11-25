@@ -1,14 +1,14 @@
 {
   "buildings": {
-    "bank": "/models/buildings/bank.glb",
-    "depot": "/models/buildings/depot.glb",
-    "hotel": "/models/buildings/hotel.glb",
-    "house": "/models/buildings/house.glb",
-    "office": "/models/buildings/office.glb",
-    "saloon": "/models/buildings/saloon.glb",
-    "settlement": "/models/buildings/settlement.glb",
-    "sheriff": "/models/buildings/sheriff.glb",
-    "store": "/models/buildings/store.glb"
+    "bank_001": "/models/buildings/bank/bank_001.glb",
+    "church_001": "/models/buildings/church/church_001.glb",
+    "homestead_001": "/models/buildings/homestead/homestead_001.glb",
+    "hotel_001": "/models/buildings/hotel/hotel_001.glb",
+    "saloon_001": "/models/buildings/saloon/saloon_001.glb",
+    "saloon_002": "/models/buildings/saloon/saloon_002.glb",
+    "settlement_001": "/models/buildings/settlement/settlement_001.glb",
+    "sheriff_001": "/models/buildings/sheriff/sheriff_001.glb",
+    "store_001": "/models/buildings/store/store_001.glb"
   },
   "structures": {
     "water_tower": "/models/structures/water_tower.glb",
