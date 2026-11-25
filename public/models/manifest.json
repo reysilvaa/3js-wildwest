@@ -31,7 +31,8 @@
   },
   "animations": {
     "idle": "/models/animations/idle.glb",
-    "walk": "/models/animations/walk.glb"
+    "walk": "/models/animations/walk.glb",
+    "wave": "/models/animations/wave.glb"
   },
   "npc": {
     "characters": [

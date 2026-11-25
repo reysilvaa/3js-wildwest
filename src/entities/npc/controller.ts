@@ -93,7 +93,8 @@ function loadNPCData(url: string): Promise<NPCDataPayload | null> {
 
 async function getSharedNPCAnimations(
   walkUrl?: string,
-  idleUrl?: string
+  idleUrl?: string,
+  waveUrl?: string
 ): Promise<Map<string, THREE.AnimationClip>> {
   if (sharedAnimCachePromise) return sharedAnimCachePromise;
 
@@ -101,34 +102,28 @@ async function getSharedNPCAnimations(
     const { animations } = await getModelsManifest();
     const resolvedIdle = idleUrl ?? animations.idle;
     const resolvedWalk = walkUrl ?? animations.walk;
+    const resolvedWave = waveUrl ?? animations.wave;
     const map = new Map<string, THREE.AnimationClip>();
-    const [idleGltf, walkGltf] = await Promise.all([
-      resolvedIdle
-        ? loadGLTF(resolvedIdle).catch((err) => {
-            console.warn("[NPC] Failed to load idle animation:", err);
-            return null;
-          })
-        : Promise.resolve(null),
-      resolvedWalk
-        ? loadGLTF(resolvedWalk).catch((err) => {
-            console.warn("[NPC] Failed to load walk animation:", err);
-            return null;
-          })
-        : Promise.resolve(null),
+    const [idleGltf, walkGltf, waveGltf] = await Promise.all([
+      resolvedIdle ? loadGLTF(resolvedIdle).catch(() => null) : Promise.resolve(null),
+      resolvedWalk ? loadGLTF(resolvedWalk).catch(() => null) : Promise.resolve(null),
+      resolvedWave ? loadGLTF(resolvedWave).catch(() => null) : Promise.resolve(null),
     ]);
 
-    if (idleGltf?.animations) {
-      for (const a of idleGltf.animations) {
-        if (a.name === "Idle" || a.name === "Wave") {
-          map.set(a.name, filterTracks(a));
-        }
-      }
+    if (idleGltf?.animations?.[0]) {
+      const clip = idleGltf.animations[0];
+      clip.name = "Idle";
+      map.set("Idle", filterTracks(clip));
     }
-
-    if (walkGltf?.animations && walkGltf.animations.length > 0) {
-      const walkClip = walkGltf.animations[0]!;
-      walkClip.name = "Walk";
-      map.set("Walk", filterTracks(walkClip));
+    if (walkGltf?.animations?.[0]) {
+      const clip = walkGltf.animations[0];
+      clip.name = "Walk";
+      map.set("Walk", filterTracks(clip));
+    }
+    if (waveGltf?.animations?.[0]) {
+      const clip = waveGltf.animations[0];
+      clip.name = "Wave";
+      map.set("Wave", filterTracks(clip));
     }
 
     return map;
