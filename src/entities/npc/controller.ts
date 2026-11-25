@@ -57,7 +57,7 @@ export interface NPCController extends SeparableEntity {
   isPaused: () => boolean;
 }
 
-let sharedAnimCachePromise: Promise<Map<string, THREE.AnimationClip>> | null = null;
+let sharedAnimCachePromise: Promise<Map<string, THREE.AnimationClip[]>> | null = null;
 
 const SKIP_TRACK = /hand|thumb|index|middle|ring|pinky|forearm[12]|\.00[123]/i;
 function filterTracks(clip: THREE.AnimationClip): THREE.AnimationClip {
@@ -91,36 +91,33 @@ function loadNPCData(url: string): Promise<NPCDataPayload | null> {
   return promise;
 }
 
-async function getSharedNPCAnimations(
-  walkUrl?: string,
-  idleUrl?: string,
-  waveUrl?: string
-): Promise<Map<string, THREE.AnimationClip>> {
+async function getSharedNPCAnimations(): Promise<Map<string, THREE.AnimationClip[]>> {
   if (sharedAnimCachePromise) return sharedAnimCachePromise;
 
   sharedAnimCachePromise = (async () => {
     const { animations } = await getModelsManifest();
-    const resolvedIdle = idleUrl ?? animations.idle;
-    const resolvedWalk = walkUrl ?? animations.walk;
-    const resolvedWave = waveUrl ?? animations.wave;
-    const map = new Map<string, THREE.AnimationClip>();
-    const [idleGltf, walkGltf, waveGltf] = await Promise.all([
-      resolvedIdle ? loadGLTF(resolvedIdle).catch(() => null) : Promise.resolve(null),
-      resolvedWalk ? loadGLTF(resolvedWalk).catch(() => null) : Promise.resolve(null),
-      resolvedWave ? loadGLTF(resolvedWave).catch(() => null) : Promise.resolve(null),
-    ]);
+    const map = new Map<string, THREE.AnimationClip[]>([["Idle", []], ["Walk", []], ["Wave", []]]);
+    const groups: Array<[string, string[]]> = [
+      ["Idle", Object.entries(animations).filter(([k]) => k.startsWith("idle")).map(([, u]) => u)],
+      ["Walk", Object.entries(animations).filter(([k]) => k.startsWith("walk")).map(([, u]) => u)],
+      ["Wave", Object.entries(animations).filter(([k]) => k.startsWith("wave")).map(([, u]) => u)],
+    ];
 
-    const pick = (gltf: { animations?: THREE.AnimationClip[] } | null, name: string) =>
-      gltf?.animations?.find((a) => a.name.toLowerCase() === name.toLowerCase()) ?? gltf?.animations?.[0];
-
-    for (const [name, gltf] of [["Idle", idleGltf], ["Walk", walkGltf], ["Wave", waveGltf]] as const) {
-      const clip = pick(gltf, name);
-      if (clip) {
-        clip.name = name;
-        map.set(name, filterTracks(clip));
-      }
-    }
-
+    await Promise.all(
+      groups.flatMap(([groupName, urls]) =>
+        urls.map((url) =>
+          loadGLTF(url)
+            .then((gltf) => {
+              const clip = gltf.animations?.[0];
+              if (clip) {
+                clip.name = groupName;
+                map.get(groupName)!.push(filterTracks(clip));
+              }
+            })
+            .catch(() => null)
+        )
+      )
+    );
     return map;
   })();
 
@@ -249,9 +246,14 @@ export class NPC implements NPCController {
     modelObj.root.userData.npcId = this.id;
 
     try {
-      const animMap = await getSharedNPCAnimations(this.options.walkAnimUrl, this.options.idleAnimUrl);
-      for (const [name, clip] of animMap) {
-        modelObj.animations.set(name, clip);
+      const animMap = await getSharedNPCAnimations();
+      const seed = this.options.modelIndex ?? Math.floor(Math.random() * 100);
+      for (const [name, clips] of animMap) {
+        if (clips.length > 0) {
+          // Each NPC gets its own Idle/Walk/Wave variation for organic town diversity
+          const picked = clips[(seed + (name === "Walk" ? 1 : name === "Wave" ? 2 : 0)) % clips.length]!;
+          modelObj.animations.set(name, picked);
+        }
       }
     } catch (err) {
       console.warn(`[NPC ${this.name}] Failed to load animations:`, err);
