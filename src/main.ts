@@ -13,6 +13,7 @@ import { initTumbleweeds } from "./entities/tumbleweed.js";
 import { initBubbleChat } from "./ui/bubble-chat.js";
 import { initBuildingPanels } from "./ui/building-panel.js";
 import { initInspector } from "./ui/inspector.js";
+import { initMobileExperience } from "./ui/mobile.js";
 
 const { scene, camera, renderer, controls, sunLight, hemiLight } = initScene();
 const cameraController = initCameraController(camera, controls);
@@ -36,6 +37,7 @@ const weather = initWeather(scene, sunLight, hemiLight, {
 });
 audio.setTimeOfDay(weather.getState().timeOfDay);
 initAudioUI({ onToggleMute: () => audio.toggleMute(), isMuted: () => audio.isMuted() });
+initMobileExperience();
 
 const npcs = spawnTownNPCs(scene, buildingBoxes, camera, world.getBuildings);
 const bubbleChat = initBubbleChat({ camera, headOffsetY: 1.45 });

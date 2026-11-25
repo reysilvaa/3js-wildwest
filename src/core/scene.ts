@@ -50,6 +50,7 @@ export function initScene(options: SceneOptions = {}): SceneContext {
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.05;
+  controls.screenSpacePanning = false;
   controls.maxPolarAngle = Math.PI / 2 - 0.02;
   controls.minDistance = 2;
   controls.maxDistance = 70;

@@ -60,6 +60,17 @@ export function initCameraController(
     }
   }
 
+  // Mobile dual-zone touch: left half = rotate, right half = pan/move camera, 2-finger = pinch zoom
+  controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
+  controls.domElement?.addEventListener(
+    "pointerdown",
+    (e) => {
+      if (!(e instanceof PointerEvent) || e.pointerType !== "touch") return;
+      controls.touches.ONE = e.clientX < window.innerWidth * 0.5 ? THREE.TOUCH.ROTATE : THREE.TOUCH.PAN;
+    },
+    { capture: true }
+  );
+
   let streetView = false;
   Object.assign(window, {
     __toggleCameraView: () => {

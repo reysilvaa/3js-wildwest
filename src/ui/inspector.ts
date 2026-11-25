@@ -276,6 +276,7 @@ export function initInspector({ scene, camera, controls, domElement, npcs, getBu
   });
 
   domElement.addEventListener("pointermove", (e) => {
+    if (e.pointerType === "touch") return;
     px = e.clientX; py = e.clientY;
     if (hovered) tip.style.transform = `translate3d(${px}px,${py - 6}px,0) translate(-13.27%,-100%)`;
     const now = performance.now();
