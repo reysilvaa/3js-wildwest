@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { loadGLTF, resolveAssetUrl } from "../assets.js";
+import { getGroundHeightOnly } from "../terrain/height.js";
 
 export interface CloudOptions {
   modelUrl?: string;
@@ -63,13 +64,15 @@ export function initClouds(scene: THREE.Scene, options: CloudOptions = {}): Clou
 
   let cloudMaterials: THREE.MeshStandardMaterial[] = [];
 
-  const sharedShadowGeo = new THREE.PlaneGeometry(16, 16);
+  const sharedShadowGeo = new THREE.PlaneGeometry(26, 26);
   sharedShadowGeo.rotateX(-Math.PI / 2);
   const sharedShadowMat = new THREE.MeshBasicMaterial({
     map: shadowTex,
     transparent: true,
-    opacity: 0.35,
+    opacity: 0.28,
     depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
   });
 
   resolveAssetUrl(modelUrl).then(loadGLTF).then((gltf) => {
@@ -111,14 +114,14 @@ export function initClouds(scene: THREE.Scene, options: CloudOptions = {}): Clou
       const entity: CloudEntity = {
         mesh: cloudMesh,
         shadow: shadowMesh,
-        x: (Math.random() - 0.5) * 450 + 10,
-        y: 35 + Math.random() * 15,
-        z: (Math.random() - 0.5) * 450 - 5,
-        speed: 1.2 + Math.random() * 2.0,
+        x: (Math.random() - 0.5) * 320 + 10,
+        y: 35 + Math.random() * 14,
+        z: i < 6 ? (Math.random() - 0.5) * 140 : (Math.random() - 0.5) * 340,
+        speed: 1.4 + Math.random() * 2.0,
       };
 
       cloudMesh.position.set(entity.x, entity.y, entity.z);
-      shadowMesh.position.set(entity.x, 0.05, entity.z);
+      shadowMesh.position.set(entity.x, getGroundHeightOnly(entity.x, entity.z) + 0.12, entity.z);
 
       scene.add(cloudMesh);
       scene.add(shadowMesh);
@@ -138,6 +141,8 @@ export function initClouds(scene: THREE.Scene, options: CloudOptions = {}): Clou
       } else {
         targetColor.copy(isRain ? rainNightColor : nightColor);
       }
+      const targetShadowOp = isRain ? 0.1 : time === "night" ? 0.08 : time === "sunset" ? 0.2 : 0.28;
+      sharedShadowMat.opacity += (targetShadowOp - sharedShadowMat.opacity) * Math.min(1, 1.5 * dt);
     }
 
     for (let m = 0; m < cloudMaterials.length; m++) {
@@ -162,7 +167,7 @@ export function initClouds(scene: THREE.Scene, options: CloudOptions = {}): Clou
       }
 
       c.mesh.position.set(c.x, c.y, c.z);
-      c.shadow.position.set(c.x, 0.05, c.z);
+      c.shadow.position.set(c.x, getGroundHeightOnly(c.x, c.z) + 0.12, c.z);
     }
   }
 

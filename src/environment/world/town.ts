@@ -220,7 +220,7 @@ export function loadWorld(
             if ((child as THREE.Mesh).isMesh) {
               const mesh = child as THREE.Mesh;
               mesh.receiveShadow = true;
-              mesh.castShadow = isBuilding && !mesh.name.includes("Cylinder005");
+              mesh.castShadow = !mesh.name.includes("Cylinder005");
               mesh.frustumCulled = true;
 
               const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
