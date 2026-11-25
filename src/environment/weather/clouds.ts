@@ -78,13 +78,17 @@ export function initClouds(scene: THREE.Scene, options: CloudOptions = {}): Clou
     baseModel.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
         const mesh = child as THREE.Mesh;
-        const oldMat = mesh.material as THREE.MeshStandardMaterial;
+        mesh.geometry.computeVertexNormals();
 
         const newMat = new THREE.MeshStandardMaterial({
           color: dayColor.clone(),
-          roughness: 0.95,
+          emissive: dayColor.clone(),
+          emissiveIntensity: 0.14,
+          roughness: 1.0,
           metalness: 0.0,
-          flatShading: oldMat.flatShading,
+          flatShading: false,
+          transparent: true,
+          opacity: 0.9,
           fog: true,
         });
 
@@ -137,7 +141,10 @@ export function initClouds(scene: THREE.Scene, options: CloudOptions = {}): Clou
     }
 
     for (let m = 0; m < cloudMaterials.length; m++) {
-      cloudMaterials[m]?.color.lerp(targetColor, 1.5 * dt);
+      const mat = cloudMaterials[m];
+      if (!mat) continue;
+      mat.color.lerp(targetColor, 1.5 * dt);
+      mat.emissive.copy(mat.color);
     }
 
     const boundX = 260;
