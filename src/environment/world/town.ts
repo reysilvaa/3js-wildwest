@@ -8,6 +8,7 @@ export interface TownInstance {
   asset: AssetKey;
   name?: string;
   label?: string;
+  icon?: string;
   solid?: boolean;
   pos: [number, number, number];
   rot: [number, number, number, number];
@@ -28,6 +29,7 @@ export interface BuildingOccupant {
 export interface InteractiveBuilding {
   readonly id: string;
   readonly label: string;
+  readonly iconUrl?: string;
   readonly root: THREE.Object3D;
   readonly entryPos: THREE.Vector3;
   readonly doorPos: THREE.Vector3;
@@ -196,6 +198,7 @@ export function loadWorld(
                 buildings.push({
                   id: bldgId,
                   label: inst.label ?? inst.asset.toUpperCase(),
+                  iconUrl: inst.icon,
                   root: model,
                   entryPos,
                   doorPos,

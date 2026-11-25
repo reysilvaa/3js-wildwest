@@ -19,7 +19,7 @@ type Target = { kind: "npc"; npc: NPCController } | { kind: "building"; building
 const CSS = `
 .insp-tip{position:fixed;left:0;top:0;z-index:60;pointer-events:none;display:none;flex-direction:column;align-items:center;gap:2px;min-width:128px;padding:12px 20px 26px 20px;background:url("/ui/bubble-frame.png") center/100% 100% no-repeat;filter:drop-shadow(0 12px 24px rgba(0,0,0,.78));font:900 12px/1.1 'Cinzel','Rye',Georgia,serif;color:#84181a;letter-spacing:.07em;text-transform:uppercase;text-shadow:0 1px 0 rgba(255,245,220,.75);white-space:nowrap;will-change:transform}
 .insp-tip small{font:700 10.5px/1.1 Georgia,serif;color:#2c1810;letter-spacing:.02em;text-transform:none;text-shadow:0 1px 0 rgba(255,245,220,.6)}
-.insp-drawer{position:fixed;top:16px;right:16px;bottom:16px;z-index:65;width:336px;max-width:calc(100vw - 32px);display:flex;flex-direction:column;gap:12px;padding:34px 30px 30px;border:none;border-radius:6px;background:url("/ui/detail-panel-frame.jpg") center/100% 100% no-repeat;box-shadow:-10px 14px 36px rgba(0,0,0,.78);color:#2c1810;font-family:Georgia,serif;transform:translateX(calc(100% + 28px));opacity:0;pointer-events:none;transition:transform .24s cubic-bezier(.22,1,.36,1),opacity .2s ease;overflow-y:auto}
+.insp-drawer{position:fixed;top:16px;right:16px;bottom:16px;z-index:65;width:356px;max-width:calc(100vw - 32px);display:flex;flex-direction:column;gap:14px;padding:48px 44px 44px;border:none;border-radius:6px;background:url("/ui/detail-panel-frame.jpg") center/100% 100% no-repeat;box-shadow:-10px 14px 36px rgba(0,0,0,.78);color:#2c1810;font-family:Georgia,serif;transform:translateX(calc(100% + 28px));opacity:0;pointer-events:none;transition:transform .24s cubic-bezier(.22,1,.36,1),opacity .2s ease;overflow-y:auto}
 .insp-drawer.open{transform:translateX(0);opacity:1;pointer-events:auto}
 .insp-stage{position:relative;width:100%;aspect-ratio:1/1;flex-shrink:0;border-radius:5px;overflow:hidden;border:1.5px solid #7d1214;background:radial-gradient(circle at 50% 42%,#3b2618 0%,#1a100a 100%);box-shadow:inset 0 0 24px rgba(0,0,0,.65);cursor:grab}
 .insp-stage:active{cursor:grabbing}
@@ -245,8 +245,11 @@ export function initInspector({ scene, camera, controls, domElement, npcs, getBu
       const occ = b.occupants.length
         ? b.occupants.map((o) => `<button class="insp-chip" data-npc="${o.id}"><img src="${o.portraitUrl}" alt="${o.name}"/>${o.name}</button>`).join("")
         : `<small style="font-style:italic;color:#6b442a">Empty right now.</small>`;
+      const iconHtml = b.iconUrl
+        ? `<img class="insp-av" src="${b.iconUrl}" alt="${b.label}"/>`
+        : `<div class="insp-ic">${b.label[0]}</div>`;
       body.innerHTML =
-        `<div class="insp-head"><div class="insp-ic">${b.label[0]}</div><div>` +
+        `<div class="insp-head">${iconHtml}<div>` +
         `<div class="insp-name">${b.label}</div><div class="insp-tags"><span class="insp-tag red">OPEN</span><span class="insp-tag">${b.occupants.length} INSIDE</span></div></div>` +
         `<button class="insp-x" data-act="close" title="Close (Esc)">✕</button></div>` +
         `<div class="insp-k">Occupants</div><div class="insp-occ">${occ}</div>` +

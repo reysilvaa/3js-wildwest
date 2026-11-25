@@ -18,7 +18,8 @@
       1,
       1
     ],
-    "label": "CHURCH"
+    "label": "CHURCH",
+    "icon": "/ui/buildings/church.jpg"
   },
   {
     "asset": "hotel_001",
@@ -39,7 +40,8 @@
       1,
       1
     ],
-    "label": "HOTEL"
+    "label": "HOTEL",
+    "icon": "/ui/buildings/hotel.jpg"
   },
   {
     "asset": "saloon_001",
@@ -60,7 +62,8 @@
       1,
       1
     ],
-    "label": "SALOON"
+    "label": "SALOON",
+    "icon": "/ui/buildings/saloon.jpg"
   },
   {
     "asset": "homestead_001",
@@ -81,7 +84,8 @@
       1,
       1
     ],
-    "label": "HOMESTEAD"
+    "label": "HOMESTEAD",
+    "icon": "/ui/buildings/homestead.jpg"
   },
   {
     "asset": "store_001",
@@ -102,7 +106,8 @@
       1,
       1
     ],
-    "label": "GENERAL STORE"
+    "label": "GENERAL STORE",
+    "icon": "/ui/buildings/store.jpg"
   },
   {
     "asset": "saloon_002",
@@ -123,7 +128,8 @@
       1,
       1
     ],
-    "label": "SALOON"
+    "label": "SALOON",
+    "icon": "/ui/buildings/saloon.jpg"
   },
   {
     "asset": "sheriff_001",
@@ -144,7 +150,8 @@
       1,
       1
     ],
-    "label": "SHERIFF"
+    "label": "SHERIFF",
+    "icon": "/ui/buildings/sheriff.jpg"
   },
   {
     "asset": "bank_001",
@@ -165,7 +172,8 @@
       1,
       1
     ],
-    "label": "BANK"
+    "label": "BANK",
+    "icon": "/ui/buildings/bank.jpg"
   },
   {
     "asset": "settlement_001",
@@ -739,7 +747,8 @@
       1,
       1
     ],
-    "label": "BANK"
+    "label": "BANK",
+    "icon": "/ui/buildings/bank.jpg"
   },
   {
     "asset": "saloon_002",
@@ -760,7 +769,8 @@
       1,
       1
     ],
-    "label": "SALOON"
+    "label": "SALOON",
+    "icon": "/ui/buildings/saloon.jpg"
   },
   {
     "asset": "hotel_001",
@@ -781,7 +791,8 @@
       1,
       1
     ],
-    "label": "HOTEL"
+    "label": "HOTEL",
+    "icon": "/ui/buildings/hotel.jpg"
   },
   {
     "asset": "bank_001",
@@ -802,7 +813,8 @@
       1,
       1
     ],
-    "label": "BANK"
+    "label": "BANK",
+    "icon": "/ui/buildings/bank.jpg"
   },
   {
     "asset": "bank_001",
@@ -823,7 +835,8 @@
       1,
       1
     ],
-    "label": "BANK"
+    "label": "BANK",
+    "icon": "/ui/buildings/bank.jpg"
   },
   {
     "asset": "store_001",
@@ -844,7 +857,8 @@
       1,
       1
     ],
-    "label": "GENERAL STORE"
+    "label": "GENERAL STORE",
+    "icon": "/ui/buildings/store.jpg"
   },
   {
     "asset": "saloon_001",
@@ -865,7 +879,8 @@
       1,
       1
     ],
-    "label": "SALOON"
+    "label": "SALOON",
+    "icon": "/ui/buildings/saloon.jpg"
   },
   {
     "asset": "bank_001",
@@ -886,7 +901,8 @@
       1,
       1
     ],
-    "label": "BANK"
+    "label": "BANK",
+    "icon": "/ui/buildings/bank.jpg"
   },
   {
     "asset": "bank_001",
@@ -907,7 +923,8 @@
       1,
       1
     ],
-    "label": "BANK"
+    "label": "BANK",
+    "icon": "/ui/buildings/bank.jpg"
   },
   {
     "asset": "bank_001",
@@ -928,7 +945,8 @@
       1,
       1
     ],
-    "label": "BANK"
+    "label": "BANK",
+    "icon": "/ui/buildings/bank.jpg"
   },
   {
     "asset": "saloon_002",
@@ -949,7 +967,8 @@
       1,
       1
     ],
-    "label": "SALOON"
+    "label": "SALOON",
+    "icon": "/ui/buildings/saloon.jpg"
   },
   {
     "asset": "bank_001",
@@ -970,7 +989,8 @@
       1,
       1
     ],
-    "label": "BANK"
+    "label": "BANK",
+    "icon": "/ui/buildings/bank.jpg"
   },
   {
     "asset": "bank_001",
@@ -991,7 +1011,8 @@
       1,
       1
     ],
-    "label": "BANK"
+    "label": "BANK",
+    "icon": "/ui/buildings/bank.jpg"
   },
   {
     "asset": "sheriff_001",
@@ -1012,7 +1033,8 @@
       1,
       1
     ],
-    "label": "SHERIFF"
+    "label": "SHERIFF",
+    "icon": "/ui/buildings/sheriff.jpg"
   },
   {
     "asset": "bank_001",
@@ -1033,7 +1055,8 @@
       1,
       1
     ],
-    "label": "BANK"
+    "label": "BANK",
+    "icon": "/ui/buildings/bank.jpg"
   },
   {
     "asset": "bank_001",
@@ -1054,7 +1077,8 @@
       1,
       1
     ],
-    "label": "BANK"
+    "label": "BANK",
+    "icon": "/ui/buildings/bank.jpg"
   },
   {
     "asset": "water_tower",
