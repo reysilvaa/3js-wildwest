@@ -61,6 +61,43 @@ export function initInspector({ scene, camera, controls, domElement, npcs, getBu
   ring.visible = false;
   scene.add(ring);
 
+  // Full-building silhouette highlight (1 shared additive material, never mutates windowMaterials)
+  const bldgHlMat = new THREE.MeshBasicMaterial({
+    color: 0xf5c84c,
+    transparent: true,
+    opacity: 0.18,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -2,
+  });
+  const noopRaycast = () => {};
+  const bldgHlMap = new WeakMap<THREE.Object3D, THREE.Group>();
+  let activeBldgHl: THREE.Group | null = null;
+
+  function getBuildingHighlight(root: THREE.Object3D): THREE.Group {
+    let hl = bldgHlMap.get(root);
+    if (hl) return hl;
+    hl = new THREE.Group();
+    hl.visible = false;
+    root.updateMatrixWorld(true);
+    const invRoot = new THREE.Matrix4().copy(root.matrixWorld).invert();
+    root.traverse((c) => {
+      // SAFETY: Type assertion verified by Three.js isMesh property check
+      if (!(c as THREE.Mesh).isMesh || c.name === "DoorBackdrop") return;
+      const src = c as THREE.Mesh;
+      const overlay = new THREE.Mesh(src.geometry, bldgHlMat);
+      overlay.matrixAutoUpdate = false;
+      overlay.matrix.multiplyMatrices(invRoot, src.matrixWorld);
+      overlay.raycast = noopRaycast;
+      hl!.add(overlay);
+    });
+    root.add(hl);
+    bldgHlMap.set(root, hl);
+    return hl;
+  }
+
   const raycaster = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
   const roots: THREE.Object3D[] = [];
@@ -197,14 +234,24 @@ export function initInspector({ scene, camera, controls, domElement, npcs, getBu
     },
     update(dt: number) {
       const active = hovered ?? selected;
-      if (active && (active.kind === "building" || active.npc.model?.root.visible)) {
+      if (active?.kind === "npc" && active.npc.model?.root.visible) {
+        if (activeBldgHl) { activeBldgHl.visible = false; activeBldgHl = null; }
         pulse += dt * 4.2;
-        const p = active.kind === "npc" ? active.npc.getPosition() : active.building.entryPos;
+        const p = active.npc.getPosition();
         ring.position.set(p.x, p.y + 0.07, p.z);
-        ring.scale.setScalar((active.kind === "npc" ? 0.68 : 1.35) * (1 + Math.sin(pulse) * 0.06));
+        ring.scale.setScalar(0.68 * (1 + Math.sin(pulse) * 0.06));
         ring.visible = true;
+      } else if (active?.kind === "building") {
+        ring.visible = false;
+        pulse += dt * 3.5;
+        bldgHlMat.opacity = 0.16 + Math.sin(pulse) * 0.05;
+        const hl = getBuildingHighlight(active.building.root);
+        if (activeBldgHl && activeBldgHl !== hl) activeBldgHl.visible = false;
+        hl.visible = true;
+        activeBldgHl = hl;
       } else {
         ring.visible = false;
+        if (activeBldgHl) { activeBldgHl.visible = false; activeBldgHl = null; }
       }
       if (selected && (refresh += dt) >= 0.35) { refresh = 0; renderModal(false); }
     },
