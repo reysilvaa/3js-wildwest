@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { isPressed } from "./keyboard.js";
-import { getGroundElevation } from "../environment/terrain/height.js";
+import { getGroundHeightOnly } from "../environment/terrain/height.js";
 
 export interface CameraControllerOptions {
   speed?: number;
@@ -52,13 +52,22 @@ export function initCameraController(
     }
 
     // Clamp camera altitude above terrain dunes
-    const minGroundY = getGroundElevation(camera.position.x, camera.position.z).height + minHeightOffset;
+    const minGroundY = getGroundHeightOnly(camera.position.x, camera.position.z) + minHeightOffset;
     if (camera.position.y < minGroundY) {
       const diff = minGroundY - camera.position.y;
       camera.position.y = minGroundY;
       controls.target.y += diff;
     }
   }
+
+  let streetView = false;
+  Object.assign(window, {
+    __toggleCameraView: () => {
+      streetView = !streetView;
+      camera.position.set(10.0, streetView ? 1.8 : 11.5, streetView ? 5.0 : 30.0);
+      controls.target.set(streetView ? 10.0 : 9.5, streetView ? 1.6 : 4.5, streetView ? -10.0 : -16.0);
+    },
+  });
 
   return { update };
 }

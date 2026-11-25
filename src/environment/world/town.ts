@@ -26,6 +26,7 @@ export interface BuildingOccupant {
 export interface InteractiveBuilding {
   readonly id: string;
   readonly label: string;
+  readonly root: THREE.Object3D;
   readonly entryPos: THREE.Vector3;
   readonly doorPos: THREE.Vector3;
   readonly roofPos: THREE.Vector3;
@@ -70,64 +71,38 @@ export function loadWorld(
   const windmillBladesList: THREE.Object3D[] = [];
   const buildings: InteractiveBuilding[] = [];
   const windowMaterials: THREE.MeshStandardMaterial[] = [];
-  const porchLights: THREE.PointLight[] = [];
+  const dynamicLights: { light: THREE.PointLight | THREE.SpotLight; max: number }[] = [];
 
   interface TownLightsConfig {
-    indoor?: Array<{
-      id: string;
-      pos: [number, number, number];
-      color: number;
-      maxIntensity: number;
-      distance: number;
-      decay: number;
-    }>;
+    indoor?: Array<{ pos: [number, number, number]; color: number; maxIntensity: number; distance: number; decay: number }>;
     lanterns?: Array<[number, number, number]>;
-    windowSpills?: Array<{
-      origin: [number, number, number];
-      target: [number, number, number];
-      angle: number;
-      penumbra: number;
-      distance: number;
-      maxIntensity: number;
-    }>;
+    windowSpills?: Array<{ origin: [number, number, number]; target: [number, number, number]; angle: number; penumbra: number; distance: number; maxIntensity: number }>;
   }
-
-  const indoorLights: { light: THREE.PointLight; maxIntensity: number }[] = [];
-  const windowSpillLights: { light: THREE.SpotLight; maxIntensity: number }[] = [];
 
   fetch("/models/town_lights.json")
     .then((res) => (res.ok ? res.json() : {}))
     .then((data: TownLightsConfig) => {
-      if (data.indoor) {
-        for (const cfg of data.indoor) {
-          const light = new THREE.PointLight(cfg.color, 0, cfg.distance, cfg.decay);
-          light.position.set(...cfg.pos);
-          light.visible = false;
-          scene.add(light);
-          indoorLights.push({ light, maxIntensity: cfg.maxIntensity });
-        }
+      for (const cfg of data.indoor ?? []) {
+        const light = new THREE.PointLight(cfg.color, 0, cfg.distance, cfg.decay);
+        light.position.set(...cfg.pos);
+        light.visible = false;
+        scene.add(light);
+        dynamicLights.push({ light, max: cfg.maxIntensity });
       }
-
-      if (data.lanterns) {
-        for (const pos of data.lanterns) {
-          const pl = new THREE.PointLight(0xffa34d, 0, 16, 2.0);
-          pl.position.set(...pos);
-          pl.visible = false;
-          scene.add(pl);
-          porchLights.push(pl);
-        }
+      for (const pos of data.lanterns ?? []) {
+        const light = new THREE.PointLight(0xffa34d, 0, 16, 2.0);
+        light.position.set(...pos);
+        light.visible = false;
+        scene.add(light);
+        dynamicLights.push({ light, max: 2.2 });
       }
-
-      if (data.windowSpills) {
-        for (const cfg of data.windowSpills) {
-          const spot = new THREE.SpotLight(0xffbe6b, 0, cfg.distance, cfg.angle, cfg.penumbra, 2.0);
-          spot.position.set(...cfg.origin);
-          spot.target.position.set(...cfg.target);
-          spot.visible = false;
-          scene.add(spot);
-          scene.add(spot.target);
-          windowSpillLights.push({ light: spot, maxIntensity: cfg.maxIntensity });
-        }
+      for (const cfg of data.windowSpills ?? []) {
+        const light = new THREE.SpotLight(0xffbe6b, 0, cfg.distance, cfg.angle, cfg.penumbra, 2.0);
+        light.position.set(...cfg.origin);
+        light.target.position.set(...cfg.target);
+        light.visible = false;
+        scene.add(light, light.target);
+        dynamicLights.push({ light, max: cfg.maxIntensity });
       }
     })
     .catch((err) => console.warn("Failed to load town lights:", err));
@@ -221,9 +196,12 @@ export function loadWorld(
                   wholeBox.max.y + 1.1,
                   (wholeBox.min.z + wholeBox.max.z) * 0.5
                 );
+                const bldgId = inst.name ?? `${inst.asset}_${buildings.length}`;
+                model.userData.buildingId = bldgId;
                 buildings.push({
-                  id: inst.name ?? `${inst.asset}_${buildings.length}`,
+                  id: bldgId,
                   label: inst.asset.toUpperCase(),
+                  root: model,
                   entryPos,
                   doorPos,
                   roofPos,
@@ -335,19 +313,10 @@ export function loadWorld(
     for (let i = 0; i < windowMaterials.length; i++) {
       windowMaterials[i]!.emissiveIntensity = clamped * 2.8;
     }
-    for (let i = 0; i < indoorLights.length; i++) {
-      const item = indoorLights[i]!;
+    for (let i = 0; i < dynamicLights.length; i++) {
+      const item = dynamicLights[i]!;
       item.light.visible = active;
-      if (active) item.light.intensity = clamped * item.maxIntensity;
-    }
-    for (let i = 0; i < porchLights.length; i++) {
-      const pl = porchLights[i]!;
-      pl.visible = active;
-      if (active) pl.intensity = clamped * 2.2;
-    }
-    for (const beam of windowSpillLights) {
-      beam.light.visible = active;
-      if (active) beam.light.intensity = clamped * beam.maxIntensity;
+      if (active) item.light.intensity = clamped * item.max;
     }
   }
 

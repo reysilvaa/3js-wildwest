@@ -48,6 +48,9 @@ export interface NPCController extends SeparableEntity {
   getCurrentActivity: () => string;
   getCurrentActivityIndex?: () => number;
   getPosition: () => THREE.Vector3;
+  getPortraitUrl: () => string;
+  getZone: () => NPCZone;
+  getCurrentBuilding: () => string | null;
   teleport: (x: number, y: number, z: number) => void;
   faceTarget: (targetPos: THREE.Vector3, duration?: number) => void;
   pause: (duration: number) => void;
@@ -56,30 +59,14 @@ export interface NPCController extends SeparableEntity {
 
 let sharedAnimCachePromise: Promise<Map<string, THREE.AnimationClip>> | null = null;
 
+const SKIP_TRACK = /hand|thumb|index|middle|ring|pinky|forearm[12]|\.00[123]/i;
 function filterTracks(clip: THREE.AnimationClip): THREE.AnimationClip {
   const cloned = clip.clone();
-  cloned.tracks = cloned.tracks.filter((t) => {
-    const lower = t.name.toLowerCase();
-    // Filter out hand, finger & twist tracks to keep Arthur's hands in natural relaxed pose
-    if (
-      lower.includes("hand") ||
-      lower.includes("thumb") ||
-      lower.includes("index") ||
-      lower.includes("middle") ||
-      lower.includes("ring") ||
-      lower.includes("pinky") ||
-      lower.includes("forearm1") ||
-      lower.includes("forearm2") ||
-      lower.includes(".001") ||
-      lower.includes(".002") ||
-      lower.includes(".003")
-    ) {
-      return false;
-    }
-    if (t.name.endsWith(".quaternion") || t.name.endsWith(".rotation")) return true;
-    if (lower.includes("hips") && (t.name.endsWith(".position") || t.name.endsWith(".translation"))) return true;
-    return false;
-  });
+  cloned.tracks = cloned.tracks.filter((t) =>
+    !SKIP_TRACK.test(t.name) &&
+    (t.name.endsWith(".quaternion") || t.name.endsWith(".rotation") ||
+      (/hips/i.test(t.name) && (t.name.endsWith(".position") || t.name.endsWith(".translation"))))
+  );
   return cloned;
 }
 
@@ -269,6 +256,7 @@ export class NPC implements NPCController {
     );
 
     this.model = modelObj;
+    modelObj.root.userData.npcId = this.id;
 
     try {
       const animMap = await getSharedNPCAnimations(this.options.walkAnimUrl, this.options.idleAnimUrl);
@@ -391,12 +379,7 @@ export class NPC implements NPCController {
       this.pauseTimer -= dt;
       if (this.faceTimer > 0 && this.forcedFaceTarget) {
         this.faceTimer -= dt;
-        this._tmpDir.subVectors(this.forcedFaceTarget, this.currentPos);
-        this._tmpDir.y = 0;
-        if (this._tmpDir.lengthSq() > 0.01) {
-          this.targetRotation.setFromAxisAngle(this.yAxis, Math.atan2(this._tmpDir.x, this._tmpDir.z));
-          this.model.root.quaternion.slerp(this.targetRotation, Math.min(1, 6 * dt));
-        }
+        this.turnToward(this.forcedFaceTarget, 6 * dt);
       }
       this.fadeToAction("Idle", 0.25);
       this.syncPosition(dt);
@@ -407,14 +390,7 @@ export class NPC implements NPCController {
     const playerNearby = camera ? camera.position.distanceToSquared(this.currentPos) < 30.25 : false;
 
     if (this.options.stationary) {
-      if (playerNearby && camera) {
-        this._tmpDir.subVectors(camera.position, this.currentPos);
-        this._tmpDir.y = 0;
-        if (this._tmpDir.lengthSq() > 0.01) {
-          this.targetRotation.setFromAxisAngle(this.yAxis, Math.atan2(this._tmpDir.x, this._tmpDir.z));
-          this.model.root.quaternion.slerp(this.targetRotation, Math.min(1, 5 * dt));
-        }
-      }
+      if (playerNearby && camera) this.turnToward(camera.position, 5 * dt);
       return;
     }
 
@@ -426,14 +402,7 @@ export class NPC implements NPCController {
 
     if (this.state === "GREET") {
       this.stateTimer -= dt;
-      if (camera) {
-        this._tmpDir.subVectors(camera.position, this.currentPos);
-        this._tmpDir.y = 0;
-        if (this._tmpDir.lengthSq() > 0.01) {
-          this.targetRotation.setFromAxisAngle(this.yAxis, Math.atan2(this._tmpDir.x, this._tmpDir.z));
-          this.model.root.quaternion.slerp(this.targetRotation, Math.min(1, 5 * dt));
-        }
-      }
+      if (camera) this.turnToward(camera.position, 5 * dt);
       if (this.stateTimer <= 0 || !playerNearby) {
         this.state = "ACTIVITY";
         this.fadeToAction("Idle", 0.3);
@@ -570,6 +539,16 @@ export class NPC implements NPCController {
     this.fadeToAction("Walk", 0.35);
   }
 
+  private turnToward(target: THREE.Vector3, alpha: number): void {
+    if (!this.model) return;
+    this._tmpDir.subVectors(target, this.currentPos);
+    this._tmpDir.y = 0;
+    if (this._tmpDir.lengthSq() > 0.01) {
+      this.targetRotation.setFromAxisAngle(this.yAxis, Math.atan2(this._tmpDir.x, this._tmpDir.z));
+      this.model.root.quaternion.slerp(this.targetRotation, Math.min(1, alpha));
+    }
+  }
+
   private syncPosition(dt = 0.016): void {
     const baseY = getGroundHeightOnly(this.currentPos.x, this.currentPos.z);
     const targetY = this.collisionWorld.getSurfaceHeight(this.currentPos.x, this.currentPos.z, baseY);
@@ -596,6 +575,18 @@ export class NPC implements NPCController {
 
   public getPosition(): THREE.Vector3 {
     return this.currentPos;
+  }
+
+  public getPortraitUrl(): string {
+    return this.portraitUrl;
+  }
+
+  public getZone(): NPCZone {
+    return this.options.homeZone ?? "center";
+  }
+
+  public getCurrentBuilding(): string | null {
+    return this.targetBuilding ? this.targetBuilding.label : null;
   }
 
   public teleport(x: number, y: number, z: number): void {
