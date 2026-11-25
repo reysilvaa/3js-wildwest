@@ -118,6 +118,7 @@ export function initInspector({ scene, camera, controls, domElement, npcs, getBu
     clone.position.set(0, 0, 0);
     clone.rotation.set(0, 0, 0);
     clone.getObjectByName("__inspHl")?.removeFromParent();
+    clone.getObjectByName("WindowLightShafts")?.removeFromParent();
     clone.traverse((c) => { c.frustumCulled = false; });
     pvPivot.add(clone);
     pvPivot.updateMatrixWorld(true);
@@ -178,7 +179,7 @@ export function initInspector({ scene, camera, controls, domElement, npcs, getBu
     const inv = new THREE.Matrix4().copy(root.matrixWorld).invert();
     root.traverse((c) => {
       // SAFETY: Type assertion verified by Three.js isMesh property check
-      if (!(c as THREE.Mesh).isMesh || c.name === "DoorBackdrop") return;
+      if (!(c as THREE.Mesh).isMesh || c.name === "DoorBackdrop" || c.name === "WindowLightShafts") return;
       const m = new THREE.Mesh((c as THREE.Mesh).geometry, bldgHlMat);
       m.matrixAutoUpdate = false;
       m.matrix.multiplyMatrices(inv, c.matrixWorld);
