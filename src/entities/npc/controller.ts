@@ -132,6 +132,7 @@ export class NPC implements NPCController {
   private state: NPCState = "ACTIVITY";
   private stateTimer = 0.6 + Math.random() * 4.5;
   private stuckTimer = 0;
+  private animAccum = Math.random() * 0.05;
   private readonly lastProgressPos = new THREE.Vector3();
   private pauseTimer = 0;
   private faceTimer = 0;
@@ -327,7 +328,16 @@ export class NPC implements NPCController {
       return;
     }
 
-    this.model.update(dt);
+    // Distance-based skeletal animation LOD (60Hz near, 20Hz mid, 10Hz far -> saves ~60% skinning CPU)
+    const camDistSq = this.options.camera ? this.options.camera.position.distanceToSquared(this.currentPos) : 0;
+    const animStep = camDistSq > 3025 ? 0.1 : camDistSq > 784 ? 0.05 : 0;
+    if (animStep === 0) {
+      this.model.update(dt + this.animAccum);
+      this.animAccum = 0;
+    } else if ((this.animAccum += dt) >= animStep) {
+      this.model.update(this.animAccum);
+      this.animAccum = 0;
+    }
 
     if ((this.state === "ENTERING" || this.state === "EXITING") && this.targetBuilding) {
       this.stateTimer -= dt;

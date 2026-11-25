@@ -62,15 +62,20 @@ export function initInspector({ scene, camera, controls, domElement, npcs, getBu
   stage.appendChild(Object.assign(document.createElement("div"), { className: "insp-stage-hint", textContent: "DRAG TO ROTATE" }));
   const body = drawer.appendChild(Object.assign(document.createElement("div"), { className: "insp-body" }));
 
-  // 1:1 live preview renderer (renders only while drawer is open)
+  // Lazy 1:1 live preview renderer (0 GPU RAM until first click, 30Hz while open)
   const pvScene = new THREE.Scene();
   const pvCam = new THREE.PerspectiveCamera(34, 1, 0.1, 120);
-  const pvRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
-  pvRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-  pvRenderer.setSize(288, 288, false);
-  pvRenderer.toneMapping = THREE.ACESFilmicToneMapping;
-  pvRenderer.toneMappingExposure = 1.25;
-  stage.prepend(pvRenderer.domElement);
+  let pvRenderer: THREE.WebGLRenderer | null = null;
+  function getPvRenderer(): THREE.WebGLRenderer {
+    if (pvRenderer) return pvRenderer;
+    pvRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "low-power" });
+    pvRenderer.setPixelRatio(1);
+    pvRenderer.setSize(288, 288, false);
+    pvRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+    pvRenderer.toneMappingExposure = 1.25;
+    stage.prepend(pvRenderer.domElement);
+    return pvRenderer;
+  }
 
   const keyLight = new THREE.DirectionalLight(0xfff2d6, 2.2);
   keyLight.position.set(4, 7, 6);
@@ -80,7 +85,7 @@ export function initInspector({ scene, camera, controls, domElement, npcs, getBu
   pvScene.add(new THREE.HemisphereLight(0xfff1d6, 0x4a2f1d, 1.35), keyLight, rimLight, pvPivot);
 
   let pvMixer: THREE.AnimationMixer | null = null;
-  let pvKey = "", pvSpin = 0, pvDrag = false, pvDragX = 0;
+  let pvKey = "", pvSpin = 0, pvDrag = false, pvDragX = 0, pvAccum = 0;
   stage.addEventListener("pointerdown", (e) => { pvDrag = true; pvDragX = e.clientX; });
   window.addEventListener("pointermove", (e) => { if (pvDrag) { pvSpin += (e.clientX - pvDragX) * 0.012; pvDragX = e.clientX; } });
   window.addEventListener("pointerup", () => { pvDrag = false; });
@@ -146,7 +151,7 @@ export function initInspector({ scene, camera, controls, domElement, npcs, getBu
     if (!target) return;
     if (target.kind === "npc") mountNPCPreview(target.npc);
     else mountBuildingPreview(target.building);
-    pvRenderer.render(pvScene, pvCam);
+    getPvRenderer().render(pvScene, pvCam);
   }
 
   // Hover visuals: NPC foot ring + full-building additive silhouette (0 material clones)
@@ -310,9 +315,13 @@ export function initInspector({ scene, camera, controls, domElement, npcs, getBu
       activeBldgHl = nextHl;
       if (activeBldgHl) { pulse += dt * 3.5; bldgHlMat.opacity = 0.16 + Math.sin(pulse) * 0.05; activeBldgHl.visible = true; }
       if (selected) {
-        pvPivot.rotation.y = pvSpin;
-        pvMixer?.update(dt);
-        pvRenderer.render(pvScene, pvCam);
+        pvAccum += dt;
+        if (pvAccum >= 0.033 || pvDrag) {
+          pvPivot.rotation.y = pvSpin;
+          pvMixer?.update(pvAccum);
+          pvAccum = 0;
+          getPvRenderer().render(pvScene, pvCam);
+        }
         if ((refresh += dt) >= 0.35) { refresh = 0; renderDrawer(false); }
       }
     },

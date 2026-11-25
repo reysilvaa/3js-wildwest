@@ -64,9 +64,15 @@ Object.assign(window, {
 });
 
 const clock = new THREE.Clock();
+let shadowTimer = 0;
+let rafId = 0;
 
 function animate() {
-  requestAnimationFrame(animate);
+  if (document.hidden) {
+    rafId = 0;
+    return;
+  }
+  rafId = requestAnimationFrame(animate);
   const dt = Math.min(clock.getDelta(), 0.1);
   const wState = weather.getState();
 
@@ -85,7 +91,21 @@ function animate() {
   clouds.update(dt, wState);
   controls.update();
 
+  // Throttle dynamic shadow map updates to 15Hz (cuts 75% shadow-pass GPU work)
+  shadowTimer += dt;
+  if (shadowTimer >= 0.066) {
+    shadowTimer = 0;
+    renderer.shadowMap.needsUpdate = true;
+  }
+
   renderer.render(scene, camera);
 }
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && !rafId) {
+    clock.getDelta();
+    animate();
+  }
+});
 
 animate();
