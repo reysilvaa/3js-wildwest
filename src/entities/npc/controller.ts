@@ -110,20 +110,15 @@ async function getSharedNPCAnimations(
       resolvedWave ? loadGLTF(resolvedWave).catch(() => null) : Promise.resolve(null),
     ]);
 
-    if (idleGltf?.animations?.[0]) {
-      const clip = idleGltf.animations[0];
-      clip.name = "Idle";
-      map.set("Idle", filterTracks(clip));
-    }
-    if (walkGltf?.animations?.[0]) {
-      const clip = walkGltf.animations[0];
-      clip.name = "Walk";
-      map.set("Walk", filterTracks(clip));
-    }
-    if (waveGltf?.animations?.[0]) {
-      const clip = waveGltf.animations[0];
-      clip.name = "Wave";
-      map.set("Wave", filterTracks(clip));
+    const pick = (gltf: { animations?: THREE.AnimationClip[] } | null, name: string) =>
+      gltf?.animations?.find((a) => a.name.toLowerCase() === name.toLowerCase()) ?? gltf?.animations?.[0];
+
+    for (const [name, gltf] of [["Idle", idleGltf], ["Walk", walkGltf], ["Wave", waveGltf]] as const) {
+      const clip = pick(gltf, name);
+      if (clip) {
+        clip.name = name;
+        map.set(name, filterTracks(clip));
+      }
     }
 
     return map;
