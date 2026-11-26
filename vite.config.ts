@@ -3,7 +3,19 @@ import { defineConfig } from "vite";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
-  plugins: [tailwindcss()],
+  plugins: [
+    tailwindcss(),
+    {
+      name: "minify-html",
+      apply: "build",
+      transformIndexHtml: (html: string) =>
+        html
+          .replace(/<!--[\s\S]*?-->/g, "")
+          .replace(/>\s+</g, "><")
+          .replace(/\s{2,}/g, " ")
+          .trim(),
+    },
+  ],
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
@@ -12,10 +24,11 @@ export default defineConfig({
   build: {
     target: "es2022",
     minify: true,
+    cssMinify: true,
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
-        manualChunks(id) {
+        manualChunks(id: string) {
           if (id.includes("node_modules/three/addons")) {
             return "three-addons";
           }

@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { GLTFLoader, type GLTF } from "three/addons/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 
 export interface ModelsManifest {
   buildings: Record<string, string>;
@@ -17,6 +18,7 @@ export interface ModelsManifest {
 export type AssetKey = string;
 
 const sharedLoader = new GLTFLoader();
+sharedLoader.setMeshoptDecoder(MeshoptDecoder);
 const gltfCache = new Map<string, Promise<GLTF>>();
 const assetCache = new Map<AssetKey, THREE.Group>();
 let manifestPromise: Promise<ModelsManifest> | null = null;
