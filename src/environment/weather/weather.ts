@@ -154,6 +154,7 @@ export function initWeather(
   }
 
   function toggleTimeOfDay() {
+    if (autoCycle) return;
     const times: TimeOfDay[] = ["day", "sunset", "night"];
     const next = times[(times.indexOf(timeOfDay) + 1) % times.length] ?? "day";
     setTimeOfDay(next);

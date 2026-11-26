@@ -177,6 +177,24 @@
     border-color: #c92429;
     color: #ffffff;
   }
+  .western-menu-row.locked {
+    opacity: 0.52;
+    cursor: not-allowed;
+    color: #8f8a82;
+  }
+  .western-menu-row.locked:hover,
+  .western-menu-row.locked.selected {
+    background: rgba(30, 31, 35, 0.75);
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: none;
+    transform: none;
+    color: #8f8a82;
+  }
+  .western-menu-row.locked .row-badge {
+    background: rgba(0, 0, 0, 0.55);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #9e978e;
+  }
 
   .western-menu-footer {
     margin-top: auto;

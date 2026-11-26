@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      lucide:
+        specifier: ^1.80.0
+        version: 1.80.0
       three:
         specifier: ^0.187.0
         version: 0.187.0
@@ -999,6 +1002,9 @@ packages:
 
   lru-cache@10.4.3:
     resolution: {integrity: sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ==}
+
+  lucide@1.80.0:
+    resolution: {integrity: sha512-3tsjW2GIkBNMYHlpnOUA4bP5jAh20iRHksM92tSsCzu24BktkK103HJfOqPybqJtDgYnY5NEf6LEyBiq0N+KjA==}
 
   magic-string@1.4.5:
     resolution: {integrity: sha512-oLLC2+YvQUfAa+vxoufE/yc1icb87M9iXIRqAoR/2EhE/8cb3SF/+Gi0c2By1B+5Vz2e2vQtUvHiu1+63Znh+w==}
@@ -2096,6 +2102,8 @@ snapshots:
       triple-beam: 1.4.1
 
   lru-cache@10.4.3: {}
+
+  lucide@1.80.0: {}
 
   magic-string@1.4.5:
     dependencies:

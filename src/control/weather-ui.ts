@@ -1,4 +1,11 @@
+import { createElement, Lock, Settings, type IconNode } from "lucide";
 import type { TimeOfDay, WeatherCondition } from "@/environment/weather/sun-moon.js";
+
+function iconSvg(icon: IconNode, size = 12, cls = ""): string {
+  const el = createElement(icon, { width: size, height: size, "stroke-width": 2.3 });
+  if (cls) el.setAttribute("class", cls);
+  return el.outerHTML;
+}
 
 export interface WeatherUIHandlers {
   onToggleTime: () => void;
@@ -23,6 +30,7 @@ interface MenuItemDef {
   shortcut: string;
   getBadge: () => string;
   getDesc: () => string;
+  isLocked?: () => boolean;
   action: () => void;
 }
 
@@ -38,7 +46,7 @@ export function initWeatherUI(handlers: WeatherUIHandlers): WeatherUI {
   const toggleBtn = document.createElement("button");
   toggleBtn.id = "western-menu-toggle";
   toggleBtn.className = "western-menu-toggle";
-  toggleBtn.innerHTML = '<span style="color:#cba043;font-weight:900">❖</span> SETTINGS <span style="opacity:0.6;font-size:10px">[L]</span>';
+  toggleBtn.innerHTML = `${iconSvg(Settings, 13, "text-brass shrink-0")} SETTINGS <span style="opacity:0.6;font-size:10px">[L]</span>`;
   toggleBtn.title = "Toggle Settings Menu (Shortcut: L or Tab)";
   document.body.appendChild(toggleBtn);
 
@@ -111,9 +119,18 @@ export function initWeatherUI(handlers: WeatherUIHandlers): WeatherUI {
       id: "time-of-day",
       label: "Time of Day",
       shortcut: "N",
-      getBadge: () => (currentTimeOfDay === "day" ? "DAY" : currentTimeOfDay === "sunset" ? "DUSK" : "NIGHT"),
-      getDesc: () => "Advance frontier sunlight between noon, golden sunset, and starry midnight. [Shortcut: N]",
-      action: () => handlers.onToggleTime(),
+      isLocked: () => currentAutoCycle,
+      getBadge: () => {
+        const t = currentTimeOfDay === "day" ? "DAY" : currentTimeOfDay === "sunset" ? "DUSK" : "NIGHT";
+        return currentAutoCycle ? `${iconSvg(Lock, 11, "inline-block align-[-1px] mr-1")}${t}` : t;
+      },
+      getDesc: () =>
+        currentAutoCycle
+          ? "Locked while Day Cycle is ON. Turn off Day Cycle [C] to set time manually."
+          : "Advance frontier sunlight between noon, golden sunset, and starry midnight. [Shortcut: N]",
+      action: () => {
+        if (!currentAutoCycle) handlers.onToggleTime();
+      },
     },
     {
       id: "weather",
@@ -185,9 +202,11 @@ export function initWeatherUI(handlers: WeatherUIHandlers): WeatherUI {
     menuItems.forEach((item, idx) => {
       const row = document.createElement("div");
       const isSelected = idx === selectedIdx;
-      row.className = `western-menu-row ${isSelected ? "selected" : ""}`;
+      const isLocked = item.isLocked?.() ?? false;
+      row.className = `western-menu-row${isSelected ? " selected" : ""}${isLocked ? " locked" : ""}`;
       row.setAttribute("role", "menuitem");
       row.setAttribute("tabindex", "0");
+      if (isLocked) row.setAttribute("aria-disabled", "true");
 
       row.innerHTML = `
         <span class="flex items-center gap-2">
@@ -203,7 +222,7 @@ export function initWeatherUI(handlers: WeatherUIHandlers): WeatherUI {
 
       row.addEventListener("click", () => {
         selectedIdx = idx;
-        item.action();
+        if (!isLocked) item.action();
         updateSelectedRowVisuals();
       });
 
@@ -239,7 +258,7 @@ export function initWeatherUI(handlers: WeatherUIHandlers): WeatherUI {
       toggleBtn.innerHTML = '<span style="color:#cba043;font-weight:900">❖</span> CLOSE <span style="opacity:0.6;font-size:10px">[L]</span>';
     } else {
       menuContainer.classList.add("collapsed");
-      toggleBtn.innerHTML = '<span style="color:#cba043;font-weight:900">❖</span> SETTINGS <span style="opacity:0.6;font-size:10px">[L]</span>';
+      toggleBtn.innerHTML = `${iconSvg(Settings, 13, "text-brass shrink-0")} SETTINGS <span style="opacity:0.6;font-size:10px">[L]</span>`;
     }
   }
 

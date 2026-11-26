@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { createElement, X } from "lucide";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
 import type { NPCController } from "@/entities/npc/controller.js";
@@ -190,6 +191,8 @@ export function initInspector({ scene, camera, controls, domElement, npcs, getBu
     renderDrawer(true);
   }
 
+  const closeIcon = createElement(X, { width: 16, height: 16, "stroke-width": 2.5 }).outerHTML;
+
   function renderDrawer(force = false) {
     setPreviewTarget(selected);
     if (!selected) { drawer.classList.remove("open"); lastSig = ""; return; }
@@ -201,7 +204,7 @@ export function initInspector({ scene, camera, controls, domElement, npcs, getBu
       body.innerHTML =
         `<div class="insp-head"><img class="insp-av" src="${n.getPortraitUrl()}" alt="${n.name}"/><div>` +
         `<div class="insp-name">${n.name}</div><div class="insp-tags"><span class="insp-tag red">${st}</span><span class="insp-tag">${n.getZone()}</span></div></div>` +
-        `<button class="insp-x" data-act="close" title="Close (Esc)">✕</button></div>` +
+        `<button class="insp-x" data-act="close" title="Close (Esc)">${closeIcon}</button></div>` +
         `<div class="insp-grid"><span class="insp-k">Activity</span><span class="insp-v">${st === "INDOORS" && bldg ? `Inside ${bldg}` : act}</span>` +
         `<span class="insp-k">District</span><span class="insp-v">${n.getZone().toUpperCase()} TOWN</span>` +
         `<span class="insp-k">Position</span><span class="insp-v">${p.x.toFixed(1)}, ${p.z.toFixed(1)}</span></div>` +
@@ -219,7 +222,7 @@ export function initInspector({ scene, camera, controls, domElement, npcs, getBu
       body.innerHTML =
         `<div class="insp-head">${iconHtml}<div>` +
         `<div class="insp-name">${b.label}</div><div class="insp-tags"><span class="insp-tag red">OPEN</span><span class="insp-tag">${b.occupants.length} INSIDE</span></div></div>` +
-        `<button class="insp-x" data-act="close" title="Close (Esc)">✕</button></div>` +
+        `<button class="insp-x" data-act="close" title="Close (Esc)">${closeIcon}</button></div>` +
         `<div class="insp-k">Occupants</div><div class="insp-occ">${occ}</div>` +
         `<div class="insp-acts"><button class="insp-btn" data-act="focus">Focus Cam</button><button class="insp-btn alt" data-act="door">Open Door</button></div>`;
     }
