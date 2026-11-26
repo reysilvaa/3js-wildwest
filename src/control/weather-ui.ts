@@ -144,8 +144,8 @@ export function initWeatherUI(handlers: WeatherUIHandlers): WeatherUI {
       id: "day-cycle",
       label: "Day Cycle",
       shortcut: "C",
-      getBadge: () => (currentAutoCycle ? "120S LOOP" : "OFF"),
-      getDesc: () => "Automate 120-second dynamic progression of lighting and celestial bodies. [Shortcut: C]",
+      getBadge: () => (currentAutoCycle ? "6M LOOP" : "OFF"),
+      getDesc: () => "Automate 6-minute realistic progression of sun, moon, and lighting. [Shortcut: C]",
       action: () => handlers.onToggleCycle(),
     },
     {

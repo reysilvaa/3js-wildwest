@@ -165,41 +165,38 @@ export function initSunMoon(
 
   const occlusionRay = new THREE.Ray();
   const camForward = new THREE.Vector3();
+  const sunDir = new THREE.Vector3();
+  const moonDir = new THREE.Vector3();
   const celestialDist = 450;
 
   function update(sunPos: THREE.Vector3, timeOfDay: TimeOfDay, condition: WeatherCondition): void {
-    const sunDir = sunPos.clone().normalize();
+    sunDir.copy(sunPos).normalize();
     const camPos = camera ? camera.position : new THREE.Vector3(10, 4.5, -20);
     sunGroup.position.copy(camPos).addScaledVector(sunDir, celestialDist);
 
-    const moonDir = new THREE.Vector3(-sunDir.x, Math.max(0.22, -sunDir.y), -sunDir.z).normalize();
+    moonDir.copy(sunDir).negate();
     moonGroup.position.copy(camPos).addScaledVector(moonDir, celestialDist);
 
-    if (timeOfDay === "day") {
-      sunGroup.visible = true;
-      sunCore.visible = condition === "clear";
-      sunCoreMat.color.setHex(0xffffff);
-      sunGlowMat.color.setHex(0xffda73);
-      sunGlowMat.opacity = condition === "clear" ? 0.9 : 0.12;
-      moonGroup.visible = false;
-    } else if (timeOfDay === "sunset") {
-      sunGroup.visible = true;
-      sunCore.visible = condition === "clear";
-      sunCoreMat.color.setHex(0xff6020);
-      sunGlowMat.color.setHex(0xff3b00);
-      sunGlowMat.opacity = condition === "clear" ? 0.95 : 0.15;
-      moonGroup.visible = true;
-      moonGlowMat.opacity = 0.25;
-    } else {
-      sunGroup.visible = false;
-      moonGroup.visible = condition === "clear";
-      moonGlowMat.opacity = 0.5;
-    }
+    const isClear = condition === "clear";
+    const sunElev = sunDir.y;
+    const moonElev = moonDir.y;
 
-    const isSunAboveHorizon = sunDir.y > 0.015;
-    const isClearWeather = condition === "clear";
-    const isDayOrSunset = timeOfDay === "day" || timeOfDay === "sunset";
-    let flareActive = isSunAboveHorizon && isClearWeather && isDayOrSunset;
+    // Smooth horizon fade & warmth based on actual solar elevation
+    const sunVis = THREE.MathUtils.clamp((sunElev + 0.06) / 0.14, 0, 1);
+    const duskFactor = 1 - THREE.MathUtils.clamp((sunElev - 0.02) / 0.32, 0, 1);
+    sunGroup.visible = sunVis > 0.01;
+    sunCore.visible = isClear && sunVis > 0.05;
+    sunCoreMat.color.setHex(0xffffff).lerp(new THREE.Color(0xff6020), duskFactor);
+    sunGlowMat.color.setHex(0xffda73).lerp(new THREE.Color(0xff3b00), duskFactor);
+    sunGlowMat.opacity = (isClear ? 0.92 : 0.14) * sunVis;
+
+    const moonVis = THREE.MathUtils.clamp((moonElev + 0.06) / 0.18, 0, 1);
+    moonGroup.visible = moonVis > 0.01 && (isClear || moonElev > 0.1);
+    moonCore.visible = isClear && moonVis > 0.05;
+    moonGlowMat.opacity = (isClear ? 0.52 : 0.12) * moonVis;
+
+    const isSunAboveHorizon = sunElev > 0.015;
+    let flareActive = isSunAboveHorizon && isClear && sunVis > 0.25;
 
     if (flareActive && camera) {
       camera.getWorldDirection(camForward);
@@ -222,9 +219,9 @@ export function initSunMoon(
         if (occluded) {
           flareActive = false;
         } else {
-          const intensity = Math.min(1.0, (viewDot - 0.12) / 0.72);
-          const isSunset = timeOfDay === "sunset";
-          const baseColor = isSunset ? new THREE.Color(0xff6020) : new THREE.Color(0xfffae8);
+          const intensity = Math.min(1.0, (viewDot - 0.12) / 0.72) * sunVis;
+          const isSunset = duskFactor > 0.45 || timeOfDay === "sunset";
+          const baseColor = new THREE.Color(0xfffae8).lerp(new THREE.Color(0xff6020), duskFactor);
           flareEl0.color.copy(baseColor).multiplyScalar(intensity);
           flareEl1.color.setHex(isSunset ? 0xff4411 : 0xffaa33).multiplyScalar(intensity * 0.85);
           flareEl2.color.setHex(isSunset ? 0xff5511 : 0xffaa44).multiplyScalar(intensity * 0.7);

@@ -48,10 +48,14 @@ export function initWeather(
   hemiLight: THREE.HemisphereLight,
   options: WeatherOptions = {}
 ): WeatherSystem {
+  const CYCLE_DURATION = 360;
+  const phaseForTime = (t: TimeOfDay) => (t === "day" ? 0.25 : t === "sunset" ? 0.48 : 0.75);
+
   let timeOfDay: TimeOfDay = options.initialTime ?? "day";
   let condition: WeatherCondition = options.initialCondition ?? "clear";
   let autoCycle = options.autoCycle ?? true;
-  let cycleTimer = 0;
+  let cycleTimer = phaseForTime(timeOfDay) * CYCLE_DURATION;
+  let rainBlend = condition === "rain" ? 1 : 0;
   let currentIndoorLight = 0;
   const nextRainDelay = (c: WeatherCondition) =>
     c === "rain" ? 25 + Math.random() * 35 : 40 + Math.random() * 65;
@@ -135,9 +139,68 @@ export function initWeather(
     },
   };
 
-  function getCurrentPreset(): WeatherPreset {
-    const key = `${timeOfDay}${condition.charAt(0).toUpperCase() + condition.slice(1)}`;
-    return presets[key] ?? presets.dayClear!;
+  const blendedPreset: WeatherPreset = {
+    bg: new THREE.Color(),
+    fog: new THREE.Color(),
+    fogDensity: 0.01,
+    sunColor: new THREE.Color(),
+    sunIntensity: 2.8,
+    hemiSky: new THREE.Color(),
+    hemiGround: new THREE.Color(),
+    hemiIntensity: 1.1,
+    sunPos: new THREE.Vector3(30, 45, -20),
+    rainOpacity: 0,
+  };
+  const clearScratch: WeatherPreset = {
+    bg: new THREE.Color(),
+    fog: new THREE.Color(),
+    fogDensity: 0.01,
+    sunColor: new THREE.Color(),
+    sunIntensity: 2.8,
+    hemiSky: new THREE.Color(),
+    hemiGround: new THREE.Color(),
+    hemiIntensity: 1.1,
+    sunPos: new THREE.Vector3(),
+    rainOpacity: 0,
+  };
+  const rainScratch: WeatherPreset = {
+    bg: new THREE.Color(),
+    fog: new THREE.Color(),
+    fogDensity: 0.01,
+    sunColor: new THREE.Color(),
+    sunIntensity: 0.65,
+    hemiSky: new THREE.Color(),
+    hemiGround: new THREE.Color(),
+    hemiIntensity: 0.6,
+    sunPos: new THREE.Vector3(),
+    rainOpacity: 0.85,
+  };
+
+  function lerpPreset(out: WeatherPreset, a: WeatherPreset, b: WeatherPreset, t: number): void {
+    out.bg.copy(a.bg).lerp(b.bg, t);
+    out.fog.copy(a.fog).lerp(b.fog, t);
+    out.fogDensity = THREE.MathUtils.lerp(a.fogDensity, b.fogDensity, t);
+    out.sunColor.copy(a.sunColor).lerp(b.sunColor, t);
+    out.sunIntensity = THREE.MathUtils.lerp(a.sunIntensity, b.sunIntensity, t);
+    out.hemiSky.copy(a.hemiSky).lerp(b.hemiSky, t);
+    out.hemiGround.copy(a.hemiGround).lerp(b.hemiGround, t);
+    out.hemiIntensity = THREE.MathUtils.lerp(a.hemiIntensity, b.hemiIntensity, t);
+    out.rainOpacity = THREE.MathUtils.lerp(a.rainOpacity, b.rainOpacity, t);
+  }
+
+  function sampleTimeline(sunElev: number, rBlend: number): WeatherPreset {
+    // Smooth transitions: night (<= -0.15) <-> golden dawn/dusk (~0.06) <-> midday (>= 0.35)
+    if (sunElev >= 0.06) {
+      const t = THREE.MathUtils.smoothstep(sunElev, 0.06, 0.38);
+      lerpPreset(clearScratch, presets.sunsetClear!, presets.dayClear!, t);
+      lerpPreset(rainScratch, presets.sunsetRain!, presets.dayRain!, t);
+    } else {
+      const t = THREE.MathUtils.smoothstep(sunElev, -0.18, 0.06);
+      lerpPreset(clearScratch, presets.nightClear!, presets.sunsetClear!, t);
+      lerpPreset(rainScratch, presets.nightRain!, presets.sunsetRain!, t);
+    }
+    lerpPreset(blendedPreset, clearScratch, rainScratch, rBlend);
+    return blendedPreset;
   }
 
   function setTimeOfDay(time: TimeOfDay) {
@@ -186,14 +249,31 @@ export function initWeather(
   });
   ui.update(timeOfDay, condition, autoCycle);
 
+  const sunBodyPos = new THREE.Vector3();
+  const activeLightPos = new THREE.Vector3();
+
   function update(dt: number) {
     if (autoCycle) {
-      cycleTimer = (cycleTimer + dt) % 120;
-      let newTime: TimeOfDay = "day";
-      if (cycleTimer >= 48 && cycleTimer < 72) newTime = "sunset";
-      else if (cycleTimer >= 72) newTime = "night";
-      else newTime = "day";
+      cycleTimer = (cycleTimer + dt) % CYCLE_DURATION;
+    } else {
+      // Smoothly glide toward manual preset phase when autoCycle is paused
+      const targetTimer = phaseForTime(timeOfDay) * CYCLE_DURATION;
+      let diff = targetTimer - cycleTimer;
+      if (diff > CYCLE_DURATION * 0.5) diff -= CYCLE_DURATION;
+      if (diff < -CYCLE_DURATION * 0.5) diff += CYCLE_DURATION;
+      cycleTimer = (cycleTimer + diff * Math.min(1, 2.2 * dt) + CYCLE_DURATION) % CYCLE_DURATION;
+    }
 
+    // Continuous East (+X) -> Overhead (+Y) -> West (-X) solar timeline
+    const phase = cycleTimer / CYCLE_DURATION;
+    const solarAngle = phase * Math.PI * 2 - Math.PI * 0.5; // 0=dawn(+X), 0.25=noon(+Y), 0.5=dusk(-X), 0.75=midnight(-Y)
+    const cosA = Math.cos(solarAngle);
+    const sinA = Math.sin(solarAngle);
+    sunBodyPos.set(cosA * 52, sinA * 52, -14);
+    const sunElev = sinA;
+
+    if (autoCycle) {
+      const newTime: TimeOfDay = sunElev >= 0.22 ? "day" : sunElev >= -0.08 ? "sunset" : "night";
       if (newTime !== timeOfDay) {
         timeOfDay = newTime;
         ui.update(timeOfDay, condition, autoCycle);
@@ -211,35 +291,37 @@ export function initWeather(
       }
     }
 
-    const p = getCurrentPreset();
-    const lerpSpeed = 1.5 * dt;
+    rainBlend += ((condition === "rain" ? 1 : 0) - rainBlend) * Math.min(1, 1.4 * dt);
+    const p = sampleTimeline(sunElev, rainBlend);
 
-    if (scene.background instanceof THREE.Color) {
-      scene.background.lerp(p.bg, lerpSpeed);
-    }
+    if (scene.background instanceof THREE.Color) scene.background.copy(p.bg);
     if (scene.fog && (scene.fog as THREE.FogExp2).color) {
       const fog = scene.fog as THREE.FogExp2;
-      fog.color.lerp(p.fog, lerpSpeed);
-      fog.density += (p.fogDensity - fog.density) * lerpSpeed;
+      fog.color.copy(p.fog);
+      fog.density = p.fogDensity;
     }
 
-    sunLight.color.lerp(p.sunColor, lerpSpeed);
-    sunLight.intensity += (p.sunIntensity - sunLight.intensity) * lerpSpeed;
-    sunLight.position.lerp(p.sunPos, lerpSpeed);
+    // Keep DirectionalLight above horizon: follow sun by day, smoothly hand off to moon at night
+    if (sunElev >= 0) {
+      activeLightPos.set(sunBodyPos.x, Math.max(4.5, sunBodyPos.y), sunBodyPos.z);
+    } else {
+      activeLightPos.set(-sunBodyPos.x, Math.max(8, -sunBodyPos.y), -sunBodyPos.z);
+    }
 
-    hemiLight.color.lerp(p.hemiSky, lerpSpeed);
-    hemiLight.groundColor.lerp(p.hemiGround, lerpSpeed);
-    hemiLight.intensity += (p.hemiIntensity - hemiLight.intensity) * lerpSpeed;
+    sunLight.color.copy(p.sunColor);
+    sunLight.intensity = p.sunIntensity;
+    sunLight.position.copy(activeLightPos);
 
-    let targetIndoor = 0;
-    if (timeOfDay === "night" && condition === "rain") targetIndoor = 1.0;
-    else if (timeOfDay === "night") targetIndoor = 0.85;
-    else if (timeOfDay === "sunset") targetIndoor = 0.45;
-    else if (condition === "rain") targetIndoor = 0.65;
-    currentIndoorLight += (targetIndoor - currentIndoorLight) * (2.0 * dt);
+    hemiLight.color.copy(p.hemiSky);
+    hemiLight.groundColor.copy(p.hemiGround);
+    hemiLight.intensity = p.hemiIntensity;
+
+    const nightFactor = THREE.MathUtils.smoothstep(-sunElev, -0.05, 0.25);
+    const targetIndoor = Math.min(1.0, nightFactor * 0.85 + rainBlend * 0.35);
+    currentIndoorLight += (targetIndoor - currentIndoorLight) * Math.min(1, 2.0 * dt);
     options.onIndoorLightChange?.(currentIndoorLight);
 
-    sunMoon.update(p.sunPos, timeOfDay, condition);
+    sunMoon.update(sunBodyPos, timeOfDay, condition);
     rain.update(dt, condition === "rain", p.rainOpacity);
   }
 
