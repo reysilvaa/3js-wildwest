@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { initSunMoon, type SunMoonSystem, type TimeOfDay, type WeatherCondition } from "@/environment/weather/sun-moon.js";
 import { initRain, type RainSystem } from "@/environment/weather/rain.js";
-import { initWeatherUI, type WeatherUI } from "@/control/weather-ui.js";
+import { initSettingsMenu, type SettingsMenu } from "@/ui/settings-menu.js";
 
 export type { TimeOfDay, WeatherCondition };
 
@@ -240,7 +240,7 @@ export function initWeather(
     return stateObj;
   }
 
-  const ui: WeatherUI = initWeatherUI({
+  const ui: SettingsMenu = initSettingsMenu({
     onToggleTime: toggleTimeOfDay,
     onToggleCondition: toggleCondition,
     onToggleCycle: toggleAutoCycle,

@@ -15,6 +15,7 @@ import { initBubbleChat } from "@/ui/bubble-chat.js";
 import { initBuildingPanels } from "@/ui/building-panel.js";
 import { initInspector } from "@/ui/inspector.js";
 import { initMobileExperience, IS_MOBILE } from "@/ui/mobile.js";
+import { initOnboarding } from "@/ui/onboarding.js";
 
 const { scene, camera, renderer, controls, sunLight, hemiLight } = initScene();
 const cameraController = initCameraController(camera, controls);
@@ -22,7 +23,9 @@ const audio = initAudio();
 
 const buildingBoxes: THREE.Box3[] = [];
 const ground = initDesertGround(scene);
-const world = loadWorld(scene, controls, camera, renderer, buildingBoxes);
+const world = loadWorld(scene, controls, camera, renderer, buildingBoxes, {
+  onLoad: () => setTimeout(() => onboarding.startIfFirstVisit(), 450),
+});
 const clouds = initClouds(scene);
 const tumbleweeds = initTumbleweeds(scene);
 
@@ -44,6 +47,7 @@ const npcs = spawnTownNPCs(scene, buildingBoxes, camera, world.getBuildings);
 const bubbleChat = initBubbleChat({ camera, headOffsetY: 1.45 });
 const buildingPanels = initBuildingPanels(world.getBuildings);
 const conversations = initConversationManager(npcs, bubbleChat);
+const onboarding = initOnboarding({ camera, controls, npcs, getBuildings: world.getBuildings, bubbleChat });
 const inspector = initInspector({
   scene,
   camera,

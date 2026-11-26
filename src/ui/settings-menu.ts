@@ -7,7 +7,7 @@ function renderLucideIcon(icon: IconNode, size = 12, cls = ""): string {
   return el.outerHTML;
 }
 
-export interface WeatherUIHandlers {
+export interface SettingsMenuHandlers {
   onToggleTime: () => void;
   onToggleCondition: () => void;
   onToggleCycle: () => void;
@@ -17,7 +17,7 @@ export interface WeatherUIHandlers {
   onToggleCamera?: () => void;
 }
 
-export interface WeatherUI {
+export interface SettingsMenu {
   update: (timeOfDay: TimeOfDay, condition: WeatherCondition, autoCycle: boolean) => void;
   container: HTMLDivElement;
   setAudioMuted: (muted: boolean) => void;
@@ -34,7 +34,7 @@ interface MenuItemDef {
   action: () => void;
 }
 
-export function initWeatherUI(handlers: WeatherUIHandlers): WeatherUI {
+export function initSettingsMenu(handlers: SettingsMenuHandlers): SettingsMenu {
   let currentTimeOfDay: TimeOfDay = "day";
   let currentCondition: WeatherCondition = "clear";
   let currentAutoCycle = false;
@@ -192,6 +192,17 @@ export function initWeatherUI(handlers: WeatherUIHandlers): WeatherUI {
       getBadge: () => "WASD + MOUSE",
       getDesc: () => "WASD to walk · Mouse to look · [L] or [Tab] to toggle this Settings menu.",
       action: toggleWasdGuide,
+    },
+    {
+      id: "walkthrough",
+      label: "Walkthrough Tour",
+      shortcut: "G",
+      getBadge: () => "REPLAY",
+      getDesc: () => "Replay the interactive 3D walkthrough tour of Frontier Town features.",
+      action: () => {
+        toggleMenu(false);
+        (window as unknown as { __startOnboarding?: () => void }).__startOnboarding?.();
+      },
     },
   ];
 
