@@ -1,4 +1,4 @@
-import { createElement, Lock, Settings, type IconNode } from "lucide";
+import { createElement, Lock, Settings, X, type IconNode } from "lucide";
 import type { TimeOfDay, WeatherCondition } from "@/environment/weather/sun-moon.js";
 
 function iconSvg(icon: IconNode, size = 12, cls = ""): string {
@@ -255,7 +255,7 @@ export function initWeatherUI(handlers: WeatherUIHandlers): WeatherUI {
     isMenuOpen = open !== undefined ? open : !isMenuOpen;
     if (isMenuOpen) {
       menuContainer.classList.remove("collapsed");
-      toggleBtn.innerHTML = '<span style="color:#cba043;font-weight:900">❖</span> CLOSE <span style="opacity:0.6;font-size:10px">[L]</span>';
+      toggleBtn.innerHTML = `${iconSvg(X, 13, "text-brass shrink-0")} CLOSE <span style="opacity:0.6;font-size:10px">[L]</span>`;
     } else {
       menuContainer.classList.add("collapsed");
       toggleBtn.innerHTML = `${iconSvg(Settings, 13, "text-brass shrink-0")} SETTINGS <span style="opacity:0.6;font-size:10px">[L]</span>`;
