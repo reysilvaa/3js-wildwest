@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { getModelsManifest, loadAsset, AssetKey } from "@/environment/assets.js";
+import { prewarmByCameraDistance } from "@/core/load-queue.js";
 import { getGroundHeightOnly } from "@/environment/terrain/height.js";
 import { CollisionWorld } from "@/core/collision.js";
 import { initTownLighting } from "@/environment/world/lighting.js";
@@ -83,9 +84,7 @@ export function loadWorld(
       const buildingAssets = new Set([...Object.keys(manifest.buildings), ...Object.keys(manifest.structures)]);
       const total = instances.length;
       let loaded = 0;
-      // Parallel pre-warm unique GLBs instead of 20-step sequential network waterfall
-      const uniqueAssets = [...new Set(instances.map((i) => i.asset))];
-      await Promise.all(uniqueAssets.map((a) => loadAsset(a).catch(() => null)));
+      await prewarmByCameraDistance(instances, buildingAssets, camera.position, loadAsset);
 
       for (const inst of instances) {
         try {
