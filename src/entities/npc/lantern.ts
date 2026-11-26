@@ -22,9 +22,10 @@ function getLanternGlowMaterial(): THREE.SpriteMaterial {
   c.width = c.height = 64;
   const ctx = c.getContext("2d")!;
   const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-  g.addColorStop(0, "rgba(255, 220, 150, 0.95)");
-  g.addColorStop(0.35, "rgba(255, 145, 45, 0.48)");
-  g.addColorStop(1, "rgba(255, 90, 15, 0)");
+  g.addColorStop(0, "rgba(255, 185, 95, 0.85)");
+  g.addColorStop(0.25, "rgba(255, 120, 30, 0.32)");
+  g.addColorStop(0.6, "rgba(220, 75, 10, 0.06)");
+  g.addColorStop(1, "rgba(200, 50, 0, 0)");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 64, 64);
   sharedGlowMaterial = new THREE.SpriteMaterial({
@@ -33,15 +34,16 @@ function getLanternGlowMaterial(): THREE.SpriteMaterial {
     transparent: true,
     depthWrite: false,
     fog: false,
-    opacity: 0.95,
+    opacity: 0.42,
   });
   return sharedGlowMaterial;
 }
 
 /**
- * Attaches an optimized handheld lantern + additive flame halo to the NPC's right hand bone.
+ * Attaches an optimized handheld lantern + subtle flame ember to ~32% of NPCs.
  */
 export async function attachNPCLantern(root: THREE.Group): Promise<THREE.Group | undefined> {
+  if (Math.random() > 0.32) return undefined;
   const manifest = await getModelsManifest();
   const lanternUrl = manifest.npc.lanterns[0];
   const rightHand = root.getObjectByName("RightHand_043");
@@ -61,8 +63,8 @@ export async function attachNPCLantern(root: THREE.Group): Promise<THREE.Group |
       }
     });
     const halo = new THREE.Sprite(getLanternGlowMaterial());
-    halo.position.set(0, -0.13, 0);
-    halo.scale.set(1.05, 1.05, 1);
+    halo.position.set(0, -0.14, 0);
+    halo.scale.set(0.28, 0.28, 1);
     lantern.add(halo);
     rightHand.add(lantern);
     return lantern;
@@ -138,7 +140,7 @@ export function updateNPCLanterns(
 
   for (let i = 0; i < npcs.length; i++) {
     const npc = npcs[i]!;
-    const active = showLanterns && !!npc.model?.root.visible && npc.getState() !== "INDOORS";
+    const active = showLanterns && !!npc.model?.lantern && npc.model.root.visible && npc.getState() !== "INDOORS";
     if (npc.model?.lantern) npc.model.lantern.visible = active;
     if (active) {
       candidates.push({ npc, distSq: npc.getPosition().distanceToSquared(camera.position) });
