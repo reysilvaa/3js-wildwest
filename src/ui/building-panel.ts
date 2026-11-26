@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import type { InteractiveBuilding } from "../environment/world/town.js";
+import type { InteractiveBuilding } from "@/environment/world/town.js";
 
 const STYLE_ID = "building-occupant-panel-styles";
 

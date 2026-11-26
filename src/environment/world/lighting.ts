@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { IS_MOBILE } from "@/ui/mobile.js";
 
 export interface TownLightsConfig {
   indoor?: Array<{ pos: [number, number, number]; color: number; maxIntensity: number; distance: number; decay: number }>;
@@ -38,11 +39,11 @@ export function initTownLighting(
   options: TownLightingOptions = {}
 ): TownLightingSystem {
   const {
-    lightsUrl = "/models/town_lights.json",
-    poolSize = 6,
+    lightsUrl = IS_MOBILE ? "" : "/models/town_lights.json",
+    poolSize = IS_MOBILE ? 3 : 6,
     lightColor = 0xe66e1e,
     windowColor = 0xd96e1c,
-    shaftLodDist = 85,
+    shaftLodDist = IS_MOBILE ? 60 : 85,
   } = options;
 
   const shaftLodDistSq = shaftLodDist * shaftLodDist;

@@ -1,4 +1,4 @@
-import type { TimeOfDay, WeatherCondition } from "../environment/weather/sun-moon.js";
+import type { TimeOfDay, WeatherCondition } from "@/environment/weather/sun-moon.js";
 
 export interface WeatherUIHandlers {
   onToggleTime: () => void;

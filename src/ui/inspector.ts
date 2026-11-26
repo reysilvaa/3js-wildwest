@@ -1,8 +1,8 @@
 import * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
-import type { NPCController } from "../entities/npc/controller.js";
-import { triggerBuildingDoor, type InteractiveBuilding } from "../environment/world/town.js";
+import type { NPCController } from "@/entities/npc/controller.js";
+import { triggerBuildingDoor, type InteractiveBuilding } from "@/environment/world/town.js";
 
 export interface InspectorOptions {
   scene: THREE.Scene;

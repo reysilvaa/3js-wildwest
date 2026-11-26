@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { IS_MOBILE } from "@/ui/mobile.js";
 
 export interface RainSystem {
   points: THREE.Points;
@@ -6,7 +7,7 @@ export interface RainSystem {
 }
 
 export function initRain(scene: THREE.Scene, onThunder?: () => void): RainSystem {
-  const rainCount = 1200;
+  const rainCount = IS_MOBILE ? 450 : 1200;
   const rainGeo = new THREE.BufferGeometry();
   const rainPositions = new Float32Array(rainCount * 3);
   const rainVelocities = new Float32Array(rainCount);
@@ -40,7 +41,7 @@ export function initRain(scene: THREE.Scene, onThunder?: () => void): RainSystem
 
   const rainMat = new THREE.PointsMaterial({
     color: 0xbfd8f5,
-    size: 0.6,
+    size: IS_MOBILE ? 0.72 : 0.6,
     map: dropTexture,
     transparent: true,
     opacity: 0,

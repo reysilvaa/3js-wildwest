@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
-import { getModelsManifest, loadGLTF } from "../../environment/assets.js";
+import { getModelsManifest, loadGLTF } from "@/environment/assets.js";
 
 export interface NPCModel {
   readonly root: THREE.Group;

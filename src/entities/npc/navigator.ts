@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import type { CollisionWorld, SeparableEntity } from "../../core/collision.js";
+import type { CollisionWorld, SeparableEntity } from "@/core/collision.js";
 
 // 16-ray 360° Virtual Eyes (Context-Based Steering) — precomputed unit circle, zero per-frame allocations
 const NUM_RAYS = 16;

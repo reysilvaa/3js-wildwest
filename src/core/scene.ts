@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { IS_MOBILE } from "@/ui/mobile.js";
 
 export interface SceneOptions {
   fogColor?: number;
@@ -33,12 +34,12 @@ export function initScene(options: SceneOptions = {}): SceneContext {
   camera.position.set(...cameraPos);
 
   const renderer = new THREE.WebGLRenderer({
-    antialias: true,
+    antialias: !IS_MOBILE,
     powerPreference: "high-performance",
     precision: "mediump",
   });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.0));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, IS_MOBILE ? 0.9 : 1.0));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.15;
   renderer.shadowMap.enabled = true;
@@ -64,8 +65,9 @@ export function initScene(options: SceneOptions = {}): SceneContext {
   const sunLight = new THREE.DirectionalLight(0xfff5dd, 2.6);
   sunLight.position.set(...sunPos);
   sunLight.castShadow = true;
-  sunLight.shadow.mapSize.width = 1024;
-  sunLight.shadow.mapSize.height = 1024;
+  const shadowRes = IS_MOBILE ? 512 : 1024;
+  sunLight.shadow.mapSize.width = shadowRes;
+  sunLight.shadow.mapSize.height = shadowRes;
   sunLight.shadow.camera.near = 0.5;
   sunLight.shadow.camera.far = 150;
   sunLight.shadow.camera.left = -55;

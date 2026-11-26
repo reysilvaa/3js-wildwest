@@ -1,9 +1,10 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { getModelsManifest, loadAsset, AssetKey } from "../assets.js";
-import { getGroundHeightOnly } from "../terrain/height.js";
-import { CollisionWorld } from "../../core/collision.js";
-import { initTownLighting } from "./lighting.js";
+import { getModelsManifest, loadAsset, AssetKey } from "@/environment/assets.js";
+import { getGroundHeightOnly } from "@/environment/terrain/height.js";
+import { CollisionWorld } from "@/core/collision.js";
+import { initTownLighting } from "@/environment/world/lighting.js";
+import { IS_MOBILE } from "@/ui/mobile.js";
 
 export interface TownInstance {
   asset: AssetKey;
@@ -198,7 +199,7 @@ export function loadWorld(
                 return;
               }
               mesh.receiveShadow = true;
-              mesh.castShadow = !mesh.name.includes("Cylinder005");
+              mesh.castShadow = (IS_MOBILE ? isBuilding : true) && !mesh.name.includes("Cylinder005");
               mesh.frustumCulled = true;
 
               const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];

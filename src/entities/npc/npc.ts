@@ -1,11 +1,12 @@
 import * as THREE from "three";
-import { NPC, type NPCOptions, type NPCController, type NPCZone } from "./controller.js";
-import { CollisionWorld } from "../../core/collision.js";
-import type { InteractiveBuilding } from "../../environment/world/town.js";
+import { NPC, type NPCOptions, type NPCController, type NPCZone } from "@/entities/npc/controller.js";
+import { CollisionWorld } from "@/core/collision.js";
+import type { InteractiveBuilding } from "@/environment/world/town.js";
+import { IS_MOBILE } from "@/ui/mobile.js";
 
-export * from "./controller.js";
-export * from "./modular.js";
-export * from "./navigator.js";
+export * from "@/entities/npc/controller.js";
+export * from "@/entities/npc/modular.js";
+export * from "@/entities/npc/navigator.js";
 
 export const registeredNPCs: NPCController[] = [];
 
@@ -56,7 +57,9 @@ export function spawnTownNPCs(
   camera: THREE.Camera,
   getBuildings: () => readonly InteractiveBuilding[]
 ): NPCController[] {
-  return NPC_SPAWNS.map((spawn, i) =>
+  // Mobile spawns 14 downtown/main-street NPCs (same lively feel, >55% less skinned GPU/CPU load)
+  const spawns = IS_MOBILE ? NPC_SPAWNS.slice(0, 14) : NPC_SPAWNS;
+  return spawns.map((spawn, i) =>
     initNPC(scene, buildingBoxes, camera, {
       name: NPC_NAMES[i] ?? `Resident ${i + 1}`,
       modelIndex: i,

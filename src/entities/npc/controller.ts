@@ -1,10 +1,11 @@
 import * as THREE from "three";
-import { assembleModularCharacter, getRandomHatUrl, getRandomModularConfig, type NPCModel } from "./modular.js";
-import { getGroundHeightOnly } from "../../environment/terrain/height.js";
-import { CollisionWorld, type SeparableEntity } from "../../core/collision.js";
-import { NPCNavigator } from "./navigator.js";
-import { getModelsManifest, loadGLTF } from "../../environment/assets.js";
-import { triggerBuildingDoor, type InteractiveBuilding } from "../../environment/world/town.js";
+import { assembleModularCharacter, getRandomHatUrl, getRandomModularConfig, type NPCModel } from "@/entities/npc/modular.js";
+import { getGroundHeightOnly } from "@/environment/terrain/height.js";
+import { CollisionWorld, type SeparableEntity } from "@/core/collision.js";
+import { NPCNavigator } from "@/entities/npc/navigator.js";
+import { getModelsManifest, loadGLTF } from "@/environment/assets.js";
+import { triggerBuildingDoor, type InteractiveBuilding } from "@/environment/world/town.js";
+import { IS_MOBILE } from "@/ui/mobile.js";
 
 export type NPCState = "IDLE" | "WALK" | "GREET" | "ACTIVITY" | "ENTERING" | "INDOORS" | "EXITING";
 
@@ -237,7 +238,7 @@ export class NPC implements NPCController {
       {
         position: this.currentPos,
         scale,
-        castShadow: true,
+        castShadow: !IS_MOBILE,
         receiveShadow: true,
       },
       scene
@@ -328,9 +329,11 @@ export class NPC implements NPCController {
       return;
     }
 
-    // Distance-based skeletal animation LOD (60Hz near, 20Hz mid, 10Hz far -> saves ~60% skinning CPU)
+    // Distance-based skeletal animation LOD (tighter on mobile to save skinning CPU)
     const camDistSq = this.options.camera ? this.options.camera.position.distanceToSquared(this.currentPos) : 0;
-    const animStep = camDistSq > 3025 ? 0.1 : camDistSq > 784 ? 0.05 : 0;
+    const farSq = IS_MOBILE ? 1296 : 3025; // 36m mobile / 55m desktop
+    const midSq = IS_MOBILE ? 324 : 784;   // 18m mobile / 28m desktop
+    const animStep = camDistSq > farSq ? 0.1 : camDistSq > midSq ? 0.05 : 0;
     if (animStep === 0) {
       this.model.update(dt + this.animAccum);
       this.animAccum = 0;

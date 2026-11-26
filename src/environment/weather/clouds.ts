@@ -1,6 +1,7 @@
 import * as THREE from "three";
-import { loadGLTF, resolveAssetUrl } from "../assets.js";
-import { getGroundHeightOnly } from "../terrain/height.js";
+import { loadGLTF, resolveAssetUrl } from "@/environment/assets.js";
+import { getGroundHeightOnly } from "@/environment/terrain/height.js";
+import { IS_MOBILE } from "@/ui/mobile.js";
 
 export interface CloudOptions {
   modelUrl?: string;
@@ -52,7 +53,7 @@ export function initClouds(scene: THREE.Scene, options: CloudOptions = {}): Clou
   } = options;
 
   const clouds: CloudEntity[] = [];
-  const cloudCount = 12;
+  const cloudCount = IS_MOBILE ? 6 : 12;
   const shadowTex = createBlobShadowTexture(shadowTexSize);
 
   const dayColor = new THREE.Color(0xf6ebd9);

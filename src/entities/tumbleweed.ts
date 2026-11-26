@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import { CollisionWorld } from "../core/collision.js";
-import { loadGLTF, resolveAssetUrl } from "../environment/assets.js";
+import { CollisionWorld } from "@/core/collision.js";
+import { loadGLTF, resolveAssetUrl } from "@/environment/assets.js";
 
 export interface TumbleweedOptions {
   modelUrl?: string;

@@ -1,6 +1,6 @@
-import type { NPCController } from "./npc.js";
-import type { BubbleChatSystem } from "../../ui/bubble-chat.js";
-import { requestAIDialogue } from "../../services/ai-dialogue.js";
+import type { NPCController } from "@/entities/npc/npc.js";
+import type { BubbleChatSystem } from "@/ui/bubble-chat.js";
+import { requestAIDialogue } from "@/services/ai-dialogue.js";
 
 export interface ConversationManager {
   update: (dt: number) => void;

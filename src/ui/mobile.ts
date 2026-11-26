@@ -24,6 +24,10 @@ canvas{touch-action:none}
 }
 `;
 
+export const IS_MOBILE =
+  typeof window !== "undefined" &&
+  (window.matchMedia("(pointer: coarse)").matches || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent));
+
 export function initMobileExperience(): void {
   if (!document.getElementById(STYLE_ID)) {
     const s = document.createElement("style");
@@ -32,9 +36,7 @@ export function initMobileExperience(): void {
     document.head.appendChild(s);
   }
 
-  const isMobile = () =>
-    window.matchMedia("(pointer: coarse)").matches ||
-    /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  const isMobile = () => IS_MOBILE;
 
   const overlay = document.createElement("div");
   overlay.className = "rot-overlay";

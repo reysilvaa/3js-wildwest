@@ -1,19 +1,19 @@
 import * as THREE from "three";
-import { initScene } from "./core/scene.js";
-import { initAudio } from "./core/audio.js";
-import { initAudioUI } from "./control/audio-ui.js";
-import { initCameraController } from "./control/camera.js";
-import { initDesertGround } from "./environment/terrain/ground.js";
-import { loadWorld } from "./environment/world/town.js";
-import { initClouds } from "./environment/weather/clouds.js";
-import { initWeather } from "./environment/weather/weather.js";
-import { spawnTownNPCs, resolveNPCCollisions } from "./entities/npc/npc.js";
-import { initConversationManager } from "./entities/npc/conversation.js";
-import { initTumbleweeds } from "./entities/tumbleweed.js";
-import { initBubbleChat } from "./ui/bubble-chat.js";
-import { initBuildingPanels } from "./ui/building-panel.js";
-import { initInspector } from "./ui/inspector.js";
-import { initMobileExperience } from "./ui/mobile.js";
+import { initScene } from "@/core/scene.js";
+import { initAudio } from "@/core/audio.js";
+import { initAudioUI } from "@/control/audio-ui.js";
+import { initCameraController } from "@/control/camera.js";
+import { initDesertGround } from "@/environment/terrain/ground.js";
+import { loadWorld } from "@/environment/world/town.js";
+import { initClouds } from "@/environment/weather/clouds.js";
+import { initWeather } from "@/environment/weather/weather.js";
+import { spawnTownNPCs, resolveNPCCollisions } from "@/entities/npc/npc.js";
+import { initConversationManager } from "@/entities/npc/conversation.js";
+import { initTumbleweeds } from "@/entities/tumbleweed.js";
+import { initBubbleChat } from "@/ui/bubble-chat.js";
+import { initBuildingPanels } from "@/ui/building-panel.js";
+import { initInspector } from "@/ui/inspector.js";
+import { initMobileExperience, IS_MOBILE } from "@/ui/mobile.js";
 
 const { scene, camera, renderer, controls, sunLight, hemiLight } = initScene();
 const cameraController = initCameraController(camera, controls);
@@ -93,9 +93,9 @@ function animate() {
   clouds.update(dt, wState);
   controls.update();
 
-  // Throttle dynamic shadow map updates to 15Hz (cuts 75% shadow-pass GPU work)
+  // Throttle dynamic shadow map updates (5Hz mobile / 15Hz desktop)
   shadowTimer += dt;
-  if (shadowTimer >= 0.066) {
+  if (shadowTimer >= (IS_MOBILE ? 0.2 : 0.066)) {
     shadowTimer = 0;
     renderer.shadowMap.needsUpdate = true;
   }

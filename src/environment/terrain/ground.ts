@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { getGroundElevation, getGroundHeightOnly } from "./height.js";
+import { getGroundElevation, getGroundHeightOnly } from "@/environment/terrain/height.js";
 
 export { getGroundElevation, getGroundHeightOnly };
 

@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { isPressed } from "./keyboard.js";
-import { getGroundHeightOnly } from "../environment/terrain/height.js";
+import { isPressed } from "@/control/keyboard.js";
+import { getGroundHeightOnly } from "@/environment/terrain/height.js";
 
 export interface CameraControllerOptions {
   speed?: number;

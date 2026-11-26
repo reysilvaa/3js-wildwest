@@ -1,7 +1,7 @@
 import * as THREE from "three";
-import { initSunMoon, type SunMoonSystem, type TimeOfDay, type WeatherCondition } from "./sun-moon.js";
-import { initRain, type RainSystem } from "./rain.js";
-import { initWeatherUI, type WeatherUI } from "../../control/weather-ui.js";
+import { initSunMoon, type SunMoonSystem, type TimeOfDay, type WeatherCondition } from "@/environment/weather/sun-moon.js";
+import { initRain, type RainSystem } from "@/environment/weather/rain.js";
+import { initWeatherUI, type WeatherUI } from "@/control/weather-ui.js";
 
 export type { TimeOfDay, WeatherCondition };
 
