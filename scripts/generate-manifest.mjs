@@ -39,6 +39,7 @@ const manifest = {
     characters: scanGlbs("npc/characters").map((e) => e.url),
     hats: scanGlbs("npc/hats").map((e) => e.url),
     holsters: scanGlbs("npc/holsters").map((e) => e.url),
+    lanterns: scanGlbs("npc/lanterns").map((e) => e.url),
   },
 };
 

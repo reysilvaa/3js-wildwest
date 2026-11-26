@@ -5,6 +5,7 @@ import { CollisionWorld, type SeparableEntity } from "@/core/collision.js";
 import { NPCNavigator } from "@/entities/npc/navigator.js";
 import { getModelsManifest, loadGLTF } from "@/environment/assets.js";
 import { triggerBuildingDoor, type InteractiveBuilding } from "@/environment/world/town.js";
+import { applyLanternArmPose } from "@/entities/npc/lantern.js";
 import { IS_MOBILE } from "@/ui/mobile.js";
 
 export type NPCState = "IDLE" | "WALK" | "GREET" | "ACTIVITY" | "ENTERING" | "INDOORS" | "EXITING";
@@ -341,6 +342,7 @@ export class NPC implements NPCController {
       this.model.update(this.animAccum);
       this.animAccum = 0;
     }
+    applyLanternArmPose(this.model);
 
     if ((this.state === "ENTERING" || this.state === "EXITING") && this.targetBuilding) {
       this.stateTimer -= dt;

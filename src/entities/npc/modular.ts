@@ -1,11 +1,13 @@
 import * as THREE from "three";
 import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
 import { getModelsManifest, loadGLTF } from "@/environment/assets.js";
+import { attachNPCLantern } from "@/entities/npc/lantern.js";
 
 export interface NPCModel {
   readonly root: THREE.Group;
   readonly mixer: THREE.AnimationMixer;
   readonly animations: Map<string, THREE.AnimationClip>;
+  readonly lantern?: THREE.Group;
   update: (dt: number) => void;
 }
 
@@ -192,6 +194,8 @@ export async function assembleModularCharacter(
     await attachSocketProp(config.holsterUrl, "Hips_01", config.holsterColor);
   }
 
+  const lantern = await attachNPCLantern(root);
+
   const materials: THREE.MeshStandardMaterial[] = [];
   root.traverse((child) => {
     if ((child as THREE.Mesh).isMesh) {
@@ -332,6 +336,7 @@ export async function assembleModularCharacter(
     root,
     mixer,
     animations,
+    lantern,
     update(dt: number) {
       mixer.update(dt);
     },

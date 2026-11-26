@@ -14,6 +14,7 @@ export interface ModelsManifest {
     characters: string[];
     hats: string[];
     holsters: string[];
+    lanterns: string[];
   };
 }
 

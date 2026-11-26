@@ -8,6 +8,7 @@ import { loadWorld } from "@/environment/world/town.js";
 import { initClouds } from "@/environment/weather/clouds.js";
 import { initWeather } from "@/environment/weather/weather.js";
 import { spawnTownNPCs, resolveNPCCollisions } from "@/entities/npc/npc.js";
+import { updateNPCLanterns } from "@/entities/npc/lantern.js";
 import { initConversationManager } from "@/entities/npc/conversation.js";
 import { initTumbleweeds } from "@/entities/tumbleweed.js";
 import { initBubbleChat } from "@/ui/bubble-chat.js";
@@ -85,6 +86,12 @@ function animate() {
   audio.update(dt);
   for (let i = 0; i < npcs.length; i++) npcs[i]?.update(dt);
   resolveNPCCollisions(npcs);
+  updateNPCLanterns(
+    scene,
+    npcs,
+    camera,
+    wState.timeOfDay === "night" ? 1 : wState.timeOfDay === "sunset" ? 0.4 : 0
+  );
   conversations.update(dt);
   bubbleChat.update(camera, dt);
   buildingPanels.update(camera);

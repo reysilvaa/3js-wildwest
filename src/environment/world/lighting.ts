@@ -40,10 +40,10 @@ export function initTownLighting(
 ): TownLightingSystem {
   const {
     lightsUrl = IS_MOBILE ? "" : "/models/town_lights.json",
-    poolSize = IS_MOBILE ? 3 : 6,
+    poolSize = IS_MOBILE ? 3 : 8,
     lightColor = 0xe66e1e,
     windowColor = 0xd96e1c,
-    shaftLodDist = IS_MOBILE ? 60 : 85,
+    shaftLodDist = IS_MOBILE ? 95 : 140,
   } = options;
 
   const shaftLodDistSq = shaftLodDist * shaftLodDist;
@@ -189,11 +189,11 @@ export function initTownLighting(
       for (let i = 0; i < pooledLights.length; i++) {
         const pl = pooledLights[i]!;
         const target = scored[i];
-        if (!target || target.dSq > 2025) {
+        if (!target || target.dSq > 6400) {
           pl.intensity = 0;
         } else {
           pl.position.copy(target.pos);
-          const fade = target.dSq > 900 ? 1.0 - (Math.sqrt(target.dSq) - 30) / 15 : 1.0;
+          const fade = target.dSq > 2025 ? 1.0 - (Math.sqrt(target.dSq) - 45) / 35 : 1.0;
           pl.intensity = clamped * 4.2 * pulse * fade;
         }
       }
@@ -206,10 +206,10 @@ export function initTownLighting(
         continue;
       }
       const dSq = camPos.distanceToSquared(item.light.position);
-      if (dSq > 1600) {
+      if (dSq > 5625) {
         item.light.intensity = 0;
       } else {
-        const fade = dSq > 784 ? 1.0 - (Math.sqrt(dSq) - 28) / 12 : 1.0;
+        const fade = dSq > 2025 ? 1.0 - (Math.sqrt(dSq) - 45) / 30 : 1.0;
         item.light.intensity = clamped * item.max * pulse * fade;
       }
     }

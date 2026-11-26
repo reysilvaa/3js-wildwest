@@ -52,6 +52,9 @@
     "holsters": [
       "/models/npc/holsters/holster_001.glb",
       "/models/npc/holsters/holster_002.glb"
+    ],
+    "lanterns": [
+      "/models/npc/lanterns/lantern_001.glb"
     ]
   }
 }
