@@ -261,12 +261,12 @@ export function initWeather(
       let diff = targetTimer - cycleTimer;
       if (diff > CYCLE_DURATION * 0.5) diff -= CYCLE_DURATION;
       if (diff < -CYCLE_DURATION * 0.5) diff += CYCLE_DURATION;
-      cycleTimer = (cycleTimer + diff * Math.min(1, 2.2 * dt) + CYCLE_DURATION) % CYCLE_DURATION;
+      cycleTimer = (cycleTimer + diff * Math.min(1, 3.5 * dt) + CYCLE_DURATION) % CYCLE_DURATION;
     }
 
     // Continuous East (+X) -> Overhead (+Y) -> West (-X) solar timeline
     const phase = cycleTimer / CYCLE_DURATION;
-    const solarAngle = phase * Math.PI * 2 - Math.PI * 0.5; // 0=dawn(+X), 0.25=noon(+Y), 0.5=dusk(-X), 0.75=midnight(-Y)
+    const solarAngle = phase * Math.PI * 2; // 0=dawn(+X), 0.25=noon(+Y), 0.5=dusk(-X), 0.75=midnight(-Y)
     const cosA = Math.cos(solarAngle);
     const sinA = Math.sin(solarAngle);
     sunBodyPos.set(cosA * 52, sinA * 52, -14);
