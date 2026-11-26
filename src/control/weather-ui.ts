@@ -1,7 +1,7 @@
 import { createElement, Lock, Settings, X, type IconNode } from "lucide";
 import type { TimeOfDay, WeatherCondition } from "@/environment/weather/sun-moon.js";
 
-function iconSvg(icon: IconNode, size = 12, cls = ""): string {
+function renderLucideIcon(icon: IconNode, size = 12, cls = ""): string {
   const el = createElement(icon, { width: size, height: size, "stroke-width": 2.3 });
   if (cls) el.setAttribute("class", cls);
   return el.outerHTML;
@@ -46,7 +46,7 @@ export function initWeatherUI(handlers: WeatherUIHandlers): WeatherUI {
   const toggleBtn = document.createElement("button");
   toggleBtn.id = "western-menu-toggle";
   toggleBtn.className = "western-menu-toggle";
-  toggleBtn.innerHTML = `${iconSvg(Settings, 13, "text-brass shrink-0")} SETTINGS <span style="opacity:0.6;font-size:10px">[L]</span>`;
+  toggleBtn.innerHTML = `${renderLucideIcon(Settings, 13, "text-brass shrink-0")} SETTINGS <span style="opacity:0.6;font-size:10px">[L]</span>`;
   toggleBtn.title = "Toggle Settings Menu (Shortcut: L or Tab)";
   document.body.appendChild(toggleBtn);
 
@@ -122,7 +122,7 @@ export function initWeatherUI(handlers: WeatherUIHandlers): WeatherUI {
       isLocked: () => currentAutoCycle,
       getBadge: () => {
         const t = currentTimeOfDay === "day" ? "DAY" : currentTimeOfDay === "sunset" ? "DUSK" : "NIGHT";
-        return currentAutoCycle ? `${iconSvg(Lock, 11, "inline-block align-[-1px] mr-1")}${t}` : t;
+        return currentAutoCycle ? `${renderLucideIcon(Lock, 11, "inline-block align-[-1px] mr-1")}${t}` : t;
       },
       getDesc: () =>
         currentAutoCycle
@@ -229,7 +229,7 @@ export function initWeatherUI(handlers: WeatherUIHandlers): WeatherUI {
       listContainer.appendChild(row);
     });
 
-    updateDesc();
+    updateDescription();
   }
 
   function updateSelectedRowVisuals(): void {
@@ -241,10 +241,10 @@ export function initWeatherUI(handlers: WeatherUIHandlers): WeatherUI {
         r.classList.remove("selected");
       }
     });
-    updateDesc();
+    updateDescription();
   }
 
-  function updateDesc(): void {
+  function updateDescription(): void {
     const item = menuItems[selectedIdx];
     if (item && descEl) {
       descEl.textContent = item.getDesc();
@@ -255,10 +255,10 @@ export function initWeatherUI(handlers: WeatherUIHandlers): WeatherUI {
     isMenuOpen = open !== undefined ? open : !isMenuOpen;
     if (isMenuOpen) {
       menuContainer.classList.remove("collapsed");
-      toggleBtn.innerHTML = `${iconSvg(X, 13, "text-brass shrink-0")} CLOSE <span style="opacity:0.6;font-size:10px">[L]</span>`;
+      toggleBtn.innerHTML = `${renderLucideIcon(X, 13, "text-brass shrink-0")} CLOSE <span style="opacity:0.6;font-size:10px">[L]</span>`;
     } else {
       menuContainer.classList.add("collapsed");
-      toggleBtn.innerHTML = `${iconSvg(Settings, 13, "text-brass shrink-0")} SETTINGS <span style="opacity:0.6;font-size:10px">[L]</span>`;
+      toggleBtn.innerHTML = `${renderLucideIcon(Settings, 13, "text-brass shrink-0")} SETTINGS <span style="opacity:0.6;font-size:10px">[L]</span>`;
     }
   }
 

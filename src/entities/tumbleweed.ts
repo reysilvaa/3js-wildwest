@@ -32,7 +32,7 @@ export function initTumbleweeds(
     const twSize = twBbox.getSize(new THREE.Vector3());
     const maxDim = Math.max(twSize.x, twSize.y, twSize.z) || 1.0;
 
-    function spawnTW(x: number, z: number, vx: number, vz: number, r: number, bounce: number): TumbleweedEntity {
+    function spawnTumbleweed(x: number, z: number, vx: number, vz: number, r: number, bounce: number): TumbleweedEntity {
       const twModel = baseTW.clone();
       twModel.scale.setScalar((r * 2) / maxDim);
       scene.add(twModel);
@@ -51,8 +51,8 @@ export function initTumbleweeds(
     }
 
     const baseRadius = defaultDiameter / 2;
-    tumbleweeds.push(spawnTW(6, 22, 0.6, -5.0, baseRadius, 2.3));
-    tumbleweeds.push(spawnTW(11, 28, -0.8, -5.6, baseRadius * 0.8, 2.0));
+    tumbleweeds.push(spawnTumbleweed(6, 22, 0.6, -5.0, baseRadius, 2.3));
+    tumbleweeds.push(spawnTumbleweed(11, 28, -0.8, -5.6, baseRadius * 0.8, 2.0));
   });
 
   function update(dt: number, buildingBoxes?: THREE.Box3[]): void {

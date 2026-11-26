@@ -5,12 +5,12 @@ export interface LoadQueue<T> {
 /**
  * Priority-ordered concurrency pool so critical/nearby assets download and decode first.
  */
-export function createLoadQueue<T>(maxConcurrent = 5): LoadQueue<T> {
+export function createPriorityQueue<T>(maxConcurrent = 5): LoadQueue<T> {
   let active = 0;
   const cache = new Map<string, Promise<T>>();
   const queue: Array<{ key: string; priority: number; start: () => void }> = [];
 
-  function pump(): void {
+  function startNextQueuedTasks(): void {
     while (active < maxConcurrent && queue.length > 0) {
       let bestIdx = 0;
       for (let i = 1; i < queue.length; i++) {
@@ -43,11 +43,11 @@ export function createLoadQueue<T>(maxConcurrent = 5): LoadQueue<T> {
             })
             .finally(() => {
               active--;
-              pump();
+              startNextQueuedTasks();
             });
         },
       });
-      pump();
+      startNextQueuedTasks();
     });
 
     cache.set(key, promise);
@@ -57,7 +57,7 @@ export function createLoadQueue<T>(maxConcurrent = 5): LoadQueue<T> {
   return { enqueue };
 }
 
-export async function prewarmByCameraDistance(
+export async function preloadTownAssetsByDistance(
   instances: ReadonlyArray<{ asset: string; pos: readonly [number, number, number] }>,
   buildingAssets: ReadonlySet<string>,
   cameraPos: { x: number; z: number },

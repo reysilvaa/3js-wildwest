@@ -21,7 +21,7 @@ export interface TownLightingSystem {
   registerLightShaft: (mesh: THREE.Mesh) => void;
   registerAnchor: (pos: THREE.Vector3) => void;
   update: (dt: number) => void;
-  setFactor: (factor: number) => void;
+  setLightingIntensity: (factor: number) => void;
 }
 
 const NOOP_RAYCAST = () => {};
@@ -155,7 +155,7 @@ export function initTownLighting(
     lodTimer += dt;
   }
 
-  function setFactor(factor: number): void {
+  function setLightingIntensity(factor: number): void {
     const clamped = Math.max(0, Math.min(1, factor));
     const active = clamped > 0.01;
     if (!active && lastFactor <= 0.01 && lastFactor >= 0) return;
@@ -215,5 +215,5 @@ export function initTownLighting(
     }
   }
 
-  return { registerWindowMaterial, registerLightShaft, registerAnchor, update, setFactor };
+  return { registerWindowMaterial, registerLightShaft, registerAnchor, update, setLightingIntensity };
 }

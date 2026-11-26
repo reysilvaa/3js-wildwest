@@ -1,8 +1,8 @@
 import * as THREE from "three";
 import { GLTFLoader, type GLTF } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
-import { readPersistentGLB, writePersistentGLB } from "@/core/asset-cache.js";
-import { createLoadQueue } from "@/core/load-queue.js";
+import { getCachedModel, saveCachedModel } from "@/core/asset-cache.js";
+import { createPriorityQueue } from "@/core/load-queue.js";
 
 export interface ModelsManifest {
   buildings: Record<string, string>;
@@ -23,7 +23,7 @@ const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath("/draco/");
 const sharedLoader = new GLTFLoader();
 sharedLoader.setDRACOLoader(dracoLoader);
-const gltfQueue = createLoadQueue<GLTF>(5);
+const gltfQueue = createPriorityQueue<GLTF>(5);
 const assetCache = new Map<AssetKey, THREE.Group>();
 let manifestPromise: Promise<ModelsManifest> | null = null;
 let flatLookupPromise: Promise<Map<string, string>> | null = null;
@@ -46,7 +46,7 @@ export function getModelsManifest(): Promise<ModelsManifest> {
   return manifestPromise;
 }
 
-function getFlatAssetLookup(): Promise<Map<string, string>> {
+function getAssetUrlMap(): Promise<Map<string, string>> {
   if (!flatLookupPromise) {
     flatLookupPromise = getModelsManifest().then((m) => {
       const map = new Map<string, string>();
@@ -63,24 +63,24 @@ function getFlatAssetLookup(): Promise<Map<string, string>> {
 
 export async function resolveAssetUrl(keyOrUrl: AssetKey): Promise<string> {
   if (keyOrUrl.startsWith("/") || keyOrUrl.startsWith("http")) return keyOrUrl;
-  const resolved = (await getFlatAssetLookup()).get(keyOrUrl);
+  const resolved = (await getAssetUrlMap()).get(keyOrUrl);
   if (!resolved) {
     throw new Error(`[assets] Unknown asset key "${keyOrUrl}" not found in /models/manifest.json`);
   }
   return resolved;
 }
 
-async function loadGLTFWithCache(url: string): Promise<GLTF> {
+async function fetchModelWithCache(url: string): Promise<GLTF> {
   if (import.meta.env.DEV) return sharedLoader.loadAsync(url);
 
   const basePath = url.slice(0, url.lastIndexOf("/") + 1);
-  const cachedBuf = await readPersistentGLB(url);
+  const cachedBuf = await getCachedModel(url);
   if (cachedBuf) return sharedLoader.parseAsync(cachedBuf, basePath);
 
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to load ${url} (${res.status})`);
   const buf = await res.arrayBuffer();
-  void writePersistentGLB(url, buf.slice(0));
+  void saveCachedModel(url, buf.slice(0));
   return sharedLoader.parseAsync(buf, basePath);
 }
 
@@ -88,7 +88,7 @@ async function loadGLTFWithCache(url: string): Promise<GLTF> {
  * Shared cached GLTF loader with priority concurrency pool + persistent browser cache.
  */
 export function loadGLTF(url: string, priority = 0): Promise<GLTF> {
-  return gltfQueue.enqueue(url, priority, () => loadGLTFWithCache(url));
+  return gltfQueue.enqueue(url, priority, () => fetchModelWithCache(url));
 }
 
 /**

@@ -7,7 +7,7 @@ const BUILD_KEY = "rey_ww_cache_build";
 
 let prunePromise: Promise<void> | null = null;
 
-function openIDB(): Promise<IDBDatabase> {
+function openAssetDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(IDB_NAME, 1);
     req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
@@ -16,7 +16,7 @@ function openIDB(): Promise<IDBDatabase> {
   });
 }
 
-function ensurePruned(): Promise<void> {
+function clearOldCachesIfNewBuild(): Promise<void> {
   if (prunePromise) return prunePromise;
   prunePromise = (async () => {
     try {
@@ -28,7 +28,7 @@ function ensurePruned(): Promise<void> {
       }
       if (typeof indexedDB !== "undefined" && typeof localStorage !== "undefined") {
         if (localStorage.getItem(BUILD_KEY) !== BUILD_ID) {
-          const db = await openIDB();
+          const db = await openAssetDatabase();
           await new Promise<void>((resolve) => {
             const tx = db.transaction(IDB_STORE, "readwrite");
             tx.objectStore(IDB_STORE).clear();
@@ -45,8 +45,8 @@ function ensurePruned(): Promise<void> {
   return prunePromise;
 }
 
-export async function readPersistentGLB(url: string): Promise<ArrayBuffer | null> {
-  await ensurePruned();
+export async function getCachedModel(url: string): Promise<ArrayBuffer | null> {
+  await clearOldCachesIfNewBuild();
   try {
     if (typeof caches !== "undefined") {
       const cache = await caches.open(CACHE_NAME);
@@ -54,7 +54,7 @@ export async function readPersistentGLB(url: string): Promise<ArrayBuffer | null
       if (hit) return await hit.arrayBuffer();
     }
     if (typeof indexedDB !== "undefined") {
-      const db = await openIDB();
+      const db = await openAssetDatabase();
       return await new Promise((resolve) => {
         const req = db.transaction(IDB_STORE, "readonly").objectStore(IDB_STORE).get(url);
         req.onsuccess = () => resolve(req.result instanceof ArrayBuffer ? req.result : null);
@@ -67,8 +67,8 @@ export async function readPersistentGLB(url: string): Promise<ArrayBuffer | null
   return null;
 }
 
-export async function writePersistentGLB(url: string, buf: ArrayBuffer): Promise<void> {
-  await ensurePruned();
+export async function saveCachedModel(url: string, buf: ArrayBuffer): Promise<void> {
+  await clearOldCachesIfNewBuild();
   try {
     if (typeof caches !== "undefined") {
       const cache = await caches.open(CACHE_NAME);
@@ -76,7 +76,7 @@ export async function writePersistentGLB(url: string, buf: ArrayBuffer): Promise
       return;
     }
     if (typeof indexedDB !== "undefined") {
-      const db = await openIDB();
+      const db = await openAssetDatabase();
       await new Promise<void>((resolve) => {
         const tx = db.transaction(IDB_STORE, "readwrite");
         tx.objectStore(IDB_STORE).put(buf, url);

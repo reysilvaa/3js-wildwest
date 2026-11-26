@@ -29,7 +29,7 @@ export function initInspector({ scene, camera, controls, domElement, npcs, getBu
   const pvScene = new THREE.Scene();
   const pvCam = new THREE.PerspectiveCamera(34, 1, 0.1, 120);
   let pvRenderer: THREE.WebGLRenderer | null = null;
-  function getPvRenderer(): THREE.WebGLRenderer {
+  function getPreviewRenderer(): THREE.WebGLRenderer {
     if (pvRenderer) return pvRenderer;
     pvRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "low-power" });
     pvRenderer.setPixelRatio(1);
@@ -115,7 +115,7 @@ export function initInspector({ scene, camera, controls, domElement, npcs, getBu
     if (!target) return;
     if (target.kind === "npc") mountNPCPreview(target.npc);
     else mountBuildingPreview(target.building);
-    getPvRenderer().render(pvScene, pvCam);
+    getPreviewRenderer().render(pvScene, pvCam);
   }
 
   // Hover visuals: NPC foot ring + full-building additive silhouette (0 material clones)
@@ -287,7 +287,7 @@ export function initInspector({ scene, camera, controls, domElement, npcs, getBu
           pvPivot.rotation.y = pvSpin;
           pvMixer?.update(pvAccum);
           pvAccum = 0;
-          getPvRenderer().render(pvScene, pvCam);
+          getPreviewRenderer().render(pvScene, pvCam);
         }
         if ((refresh += dt) >= 0.35) { refresh = 0; renderDrawer(false); }
       }

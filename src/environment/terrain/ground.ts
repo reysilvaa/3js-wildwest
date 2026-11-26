@@ -65,7 +65,7 @@ export function initDesertGround(scene: THREE.Scene, options: GroundOptions = {}
 
   const texLoader = new THREE.TextureLoader();
 
-  function loadPbrSet(folder: string, repX: number, repY = repX) {
+  function loadTerrainTextures(folder: string, repX: number, repY = repX) {
     const load = (name: string, isColor = false): THREE.Texture => {
       const tex = texLoader.load(`${folder}/${name}.jpg`);
       tex.wrapS = THREE.RepeatWrapping;
@@ -82,8 +82,8 @@ export function initDesertGround(scene: THREE.Scene, options: GroundOptions = {}
     };
   }
 
-  const sand = loadPbrSet("/models/ground/sand", 120);
-  const mud = loadPbrSet("/models/ground/mud", 6, 10);
+  const sand = loadTerrainTextures("/models/ground/sand", 120);
+  const mud = loadTerrainTextures("/models/ground/mud", 6, 10);
 
   const drySandColor = new THREE.Color(0xdab47c);
   const wetSandColor = new THREE.Color(0x7c5836);
