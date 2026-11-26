@@ -1,3 +1,4 @@
+import "@/index.css";
 import * as THREE from "three";
 import { initScene } from "@/core/scene.js";
 import { initAudio } from "@/core/audio.js";

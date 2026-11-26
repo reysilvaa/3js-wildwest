@@ -72,7 +72,6 @@ export class BubbleChatManager {
     this.raycastObjects = options.raycastObjects ?? [];
 
     this.container = options.container ?? this.ensureContainer();
-    this.injectStyles();
   }
 
   private ensureContainer(): HTMLElement {
@@ -84,128 +83,6 @@ export class BubbleChatManager {
       document.body.appendChild(el);
     }
     return el;
-  }
-
-  private injectStyles(): void {
-    const styleId = "western-bubble-chat-styles";
-    if (document.getElementById(styleId)) return;
-
-    const style = document.createElement("style");
-    style.id = styleId;
-    style.textContent = `
-      .western-chat-overlay {
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-        overflow: hidden;
-        z-index: 45;
-      }
-
-      .western-bubble {
-        position: absolute;
-        top: 0;
-        left: 0;
-        pointer-events: none;
-        will-change: transform, opacity;
-        transition: opacity 0.22s ease-out;
-      }
-
-      /* Mode 1: High-Fidelity Transparent Asset Template (Exact Western Artwork) */
-      .western-bubble-frame-mode {
-        min-width: 210px;
-        max-width: 315px;
-        background-size: 100% 100%;
-        background-repeat: no-repeat;
-        /* Padding tuned to parchment writing zone, leaving room for bottom-left tail */
-        padding: 16px 24px 38px 22px;
-        filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.82));
-        transform-origin: 13.27% 99.3%;
-      }
-
-      /* Mode 2: Pure Procedural Kertas Minyak (Oiled Parchment) with Distressed Crimson Border */
-      .western-bubble-procedural-mode {
-        min-width: 180px;
-        max-width: 295px;
-        filter: drop-shadow(0 12px 26px rgba(0, 0, 0, 0.78));
-        transform-origin: 24px bottom;
-      }
-
-      .western-bubble-parchment-oil {
-        position: relative;
-        background-color: #dfbe84;
-        background-image: 
-          /* Creased paper wrinkle streaks */
-          repeating-linear-gradient(135deg, transparent, transparent 18px, rgba(140, 95, 40, 0.14) 19px, rgba(255, 255, 255, 0.25) 20px, transparent 21px),
-          repeating-linear-gradient(35deg, transparent, transparent 28px, rgba(110, 75, 25, 0.09) 29px, rgba(255, 255, 255, 0.18) 30px, transparent 31px),
-          /* Oiled translucent highlights & aged coffee/oil stains */
-          radial-gradient(ellipse at 28% 26%, rgba(255, 252, 240, 0.72) 0%, transparent 58%),
-          radial-gradient(circle at 86% 76%, rgba(135, 82, 28, 0.36) 0%, transparent 65%),
-          radial-gradient(circle at 14% 78%, rgba(158, 102, 42, 0.3) 0%, transparent 52%),
-          linear-gradient(160deg, #f6edd8 0%, #ecd2a1 35%, #dbae6c 75%, #caa05c 100%);
-        border: 3.8px solid #7d1214;
-        border-radius: 12px;
-        padding: 13px 18px 15px 18px;
-        box-shadow: 
-          inset 0 0 16px rgba(125, 18, 20, 0.32),
-          inset 0 0 38px rgba(92, 52, 16, 0.4);
-      }
-
-      /* Inner aged perimeter crease */
-      .western-bubble-parchment-oil::before {
-        content: '';
-        position: absolute;
-        inset: 1px;
-        border: 1px solid rgba(255, 242, 210, 0.42);
-        border-radius: 8px;
-        pointer-events: none;
-      }
-
-      .western-bubble-seam {
-        position: absolute;
-        bottom: -3.8px;
-        left: 24px;
-        width: 18px;
-        height: 6px;
-        background: #ecd2a1;
-        z-index: 2;
-      }
-
-      .western-tail-svg {
-        position: absolute;
-        bottom: -22px;
-        left: 18px;
-        width: 32px;
-        height: 24px;
-        overflow: visible;
-        pointer-events: none;
-      }
-
-      /* Speaker Name: Vintage Western Bold Crimson Serif */
-      .western-bubble-speaker {
-        font-family: 'Cinzel', 'Rye', 'Georgia', serif;
-        font-size: 15px;
-        font-weight: 900;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: #84181a;
-        margin-bottom: 4px;
-        line-height: 1.15;
-        text-shadow: 0 1px 0 rgba(255, 245, 220, 0.7);
-      }
-
-      /* Dialogue Text: 19th Century Typewriter / Slab Serif */
-      .western-bubble-text {
-        font-family: 'Special Elite', 'Courier Prime', 'Courier New', monospace;
-        font-size: 14.5px;
-        font-weight: 600;
-        line-height: 1.34;
-        color: #1a110b;
-        letter-spacing: -0.01em;
-        text-shadow: 0 1px 0 rgba(255, 245, 225, 0.55);
-        word-wrap: break-word;
-      }
-    `;
-    document.head.appendChild(style);
   }
 
   /**

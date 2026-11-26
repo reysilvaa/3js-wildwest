@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@theme {
+  --color-parchment-light: #fdf8ea;
+  --color-parchment: #f3e3be;
+  --color-parchment-dark: #d9be85;
+  --color-parchment-burnt: #825626;
+  --color-leather-light: #844d24;
+  --color-leather: #4e280f;
+  --color-leather-dark: #2a1306;
+  --color-brass-light: #f5d580;
+  --color-brass: #cba043;
+  --color-brass-dark: #7e5d17;
+
+  --font-western: 'Rye', serif;
+  --font-cinzel: 'Cinzel', serif;
+  --font-parchment: 'Playfair Display', Georgia, serif;
+  --font-typewriter: 'Special Elite', monospace;
+}
+
+@layer base {
+  html,
+  body {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    background: #140d07;
+    font-family: system-ui, -apple-system, sans-serif;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  canvas {
+    display: block;
+    touch-action: none;
+  }
+}
+
+@import "./styles/western-ui.css";
+@import "./styles/bubbles.css";
+@import "./styles/inspector.css";
+@import "./styles/mobile.css";

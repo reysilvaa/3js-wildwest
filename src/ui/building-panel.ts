@@ -1,58 +1,7 @@
 import * as THREE from "three";
 import type { InteractiveBuilding } from "@/environment/world/town.js";
 
-const STYLE_ID = "building-occupant-panel-styles";
-
-function injectStyles(): void {
-  if (document.getElementById(STYLE_ID)) return;
-  const style = document.createElement("style");
-  style.id = STYLE_ID;
-  style.textContent = `
-    .bldg-occ-layer {
-      position: fixed; inset: 0; pointer-events: none; z-index: 44; overflow: hidden;
-    }
-    .bldg-occ-bubble {
-      position: absolute; left: 0; top: 0;
-      display: flex; flex-direction: column; align-items: center; gap: 5px;
-      min-width: 150px;
-      background-image: url("/ui/bubble-frame.png");
-      background-size: 100% 100%;
-      background-repeat: no-repeat;
-      padding: 14px 22px 32px 22px;
-      filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.78));
-      transform-origin: 13.27% 99.3%;
-      white-space: nowrap; will-change: transform;
-    }
-    .bldg-occ-title {
-      font-family: 'Cinzel', 'Rye', 'Georgia', serif;
-      font-size: 12px; font-weight: 900; letter-spacing: 0.08em;
-      color: #84181a; text-transform: uppercase;
-      text-shadow: 0 1px 0 rgba(255, 245, 220, 0.75);
-      line-height: 1.1;
-    }
-    .bldg-occ-faces {
-      display: flex; align-items: center; justify-content: center; gap: 6px;
-    }
-    .bldg-occ-chip {
-      display: flex; flex-direction: column; align-items: center; gap: 2px;
-    }
-    .bldg-occ-avatar {
-      width: 32px; height: 32px; border-radius: 50%; object-fit: cover;
-      background: #dfc392; border: 2px solid #7d1214;
-      box-shadow: 0 2px 5px rgba(45, 22, 10, 0.45);
-    }
-    .bldg-occ-name {
-      font-family: 'Georgia', serif; font-size: 10px; font-weight: 700;
-      color: #2c1810; max-width: 48px;
-      overflow: hidden; text-overflow: ellipsis;
-      text-shadow: 0 1px 0 rgba(255, 245, 220, 0.6);
-    }
-  `;
-  document.head.appendChild(style);
-}
-
 export function initBuildingPanels(getBuildings: () => readonly InteractiveBuilding[]) {
-  injectStyles();
   const layer = document.createElement("div");
   layer.className = "bldg-occ-layer";
   document.body.appendChild(layer);

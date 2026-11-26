@@ -16,45 +16,7 @@ export interface InspectorOptions {
 
 type Target = { kind: "npc"; npc: NPCController } | { kind: "building"; building: InteractiveBuilding } | null;
 
-const CSS = `
-.insp-tip{position:fixed;left:0;top:0;z-index:60;pointer-events:none;display:none;flex-direction:column;align-items:center;gap:2px;min-width:128px;padding:12px 20px 26px 20px;background:url("/ui/bubble-frame.png") center/100% 100% no-repeat;filter:drop-shadow(0 12px 24px rgba(0,0,0,.78));font:900 12px/1.1 'Cinzel','Rye',Georgia,serif;color:#84181a;letter-spacing:.07em;text-transform:uppercase;text-shadow:0 1px 0 rgba(255,245,220,.75);white-space:nowrap;will-change:transform}
-.insp-tip small{font:700 10.5px/1.1 Georgia,serif;color:#2c1810;letter-spacing:.02em;text-transform:none;text-shadow:0 1px 0 rgba(255,245,220,.6)}
-.insp-drawer{position:fixed;top:16px;right:16px;bottom:16px;z-index:65;width:356px;max-width:calc(100vw - 32px);display:flex;flex-direction:column;gap:14px;padding:48px 44px 44px;border:none;border-radius:6px;background:url("/ui/detail-panel-frame.jpg") center/100% 100% no-repeat;box-shadow:-10px 14px 36px rgba(0,0,0,.78);color:#2c1810;font-family:Georgia,serif;transform:translateX(calc(100% + 28px));opacity:0;pointer-events:none;transition:transform .24s cubic-bezier(.22,1,.36,1),opacity .2s ease;overflow-y:auto}
-.insp-drawer.open{transform:translateX(0);opacity:1;pointer-events:auto}
-.insp-stage{position:relative;width:100%;aspect-ratio:1/1;flex-shrink:0;border-radius:5px;overflow:hidden;border:1.5px solid #7d1214;background:radial-gradient(circle at 50% 42%,#3b2618 0%,#1a100a 100%);box-shadow:inset 0 0 24px rgba(0,0,0,.65);cursor:grab}
-.insp-stage:active{cursor:grabbing}
-.insp-stage canvas{width:100%;height:100%;display:block}
-.insp-stage-hint{position:absolute;bottom:6px;right:8px;font:700 10px Georgia,serif;color:rgba(245,232,200,.55);pointer-events:none;letter-spacing:.04em}
-.insp-body{display:flex;flex-direction:column;gap:10px;flex:1}
-.insp-head{display:flex;align-items:center;gap:10px;padding-bottom:8px;border-bottom:1px solid rgba(125,18,20,.28)}
-.insp-av{width:46px;height:46px;border-radius:50%;object-fit:cover;flex-shrink:0;background:#dfc392;border:2px solid #7d1214}
-.insp-ic{width:44px;height:44px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#2c1810;color:#cba043;border:2px solid #7d1214;font:900 18px 'Cinzel',Georgia,serif}
-.insp-name{font:900 15px 'Cinzel',Georgia,serif;color:#84181a;text-transform:uppercase;letter-spacing:.05em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.insp-tags{display:flex;gap:5px;margin-top:3px}
-.insp-tag{font:800 10px Georgia,serif;text-transform:uppercase;padding:2px 6px;border-radius:3px;background:#2c1810;color:#f5e8c8}
-.insp-tag.red{background:#84181a}
-.insp-x{margin-left:auto;align-self:flex-start;background:none;border:none;cursor:pointer;color:#7d1214;font:900 18px/1 sans-serif;padding:2px 4px}
-.insp-grid{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;font-size:12.5px}
-.insp-k{font:700 10px Georgia,serif;color:#6b442a;text-transform:uppercase;letter-spacing:.04em}
-.insp-v{font-weight:600;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.insp-occ{display:flex;flex-wrap:wrap;gap:6px;padding:8px;border-radius:4px;background:rgba(44,24,16,.08)}
-.insp-chip{display:flex;align-items:center;gap:5px;padding:3px 8px 3px 3px;border-radius:99px;border:1.5px solid #7d1214;background:#f8edd2;cursor:pointer;color:#2c1810;font:700 11px Georgia,serif}
-.insp-chip img{width:22px;height:22px;border-radius:50%;object-fit:cover;border:1px solid #7d1214}
-.insp-acts{display:flex;gap:10px;margin-top:auto;padding-top:10px;border-top:1px solid rgba(125,18,20,.25)}
-.insp-btn{flex:1;padding:10px 12px;border-radius:3px;border:1.5px solid #4a0a0c;background:linear-gradient(180deg,#8d1a1c,#670f11);box-shadow:0 3px 8px rgba(44,24,16,.38),inset 0 0 0 1px rgba(203,160,67,.42);cursor:pointer;color:#f7ebd0;font:800 11px/1.1 'Cinzel',Georgia,serif;text-transform:uppercase;letter-spacing:.08em;text-shadow:0 1px 2px rgba(0,0,0,.55);transition:filter .12s ease,transform .12s ease}
-.insp-btn:hover{filter:brightness(1.12);transform:translateY(-1px)}
-.insp-btn:active{transform:translateY(0);filter:brightness(.95)}
-.insp-btn.alt{border-color:#2c1810;background:linear-gradient(180deg,#3b2317,#24130b);color:#f3e2bc}
-`;
-
 export function initInspector({ scene, camera, controls, domElement, npcs, getBuildings, onTalk }: InspectorOptions) {
-  if (!document.getElementById("frontier-inspector-styles")) {
-    const s = document.createElement("style");
-    s.id = "frontier-inspector-styles";
-    s.textContent = CSS;
-    document.head.appendChild(s);
-  }
-
   const tip = document.body.appendChild(Object.assign(document.createElement("div"), { className: "insp-tip" }));
   const drawer = document.body.appendChild(Object.assign(document.createElement("aside"), { className: "insp-drawer" }));
   drawer.setAttribute("role", "dialog");
