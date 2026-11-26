@@ -13,19 +13,13 @@ if (!fs.existsSync(DIST_MODELS)) {
 }
 
 const files = [];
-const jsonFiles = [];
 (function walk(dir) {
   for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, ent.name);
     if (ent.isDirectory()) walk(full);
     else if (ent.name.endsWith(".glb")) files.push(full);
-    else if (ent.name.endsWith(".json")) jsonFiles.push(full);
   }
 })(DIST_MODELS);
-
-for (const jf of jsonFiles) {
-  fs.writeFileSync(jf, JSON.stringify(JSON.parse(fs.readFileSync(jf, "utf8"))));
-}
 
 let before = 0;
 let after = 0;
@@ -38,7 +32,16 @@ async function worker() {
     const b = fs.statSync(file).size;
     before += b;
     const tmp = `${file}.tmp.glb`;
-    await execFileAsync(process.execPath, [CLI_BIN, "meshopt", file, tmp]);
+    await execFileAsync(process.execPath, [
+      CLI_BIN,
+      "draco",
+      file,
+      tmp,
+      "--quantize-position",
+      "14",
+      "--quantize-normal",
+      "12",
+    ]);
     fs.renameSync(tmp, file);
     after += fs.statSync(file).size;
   }

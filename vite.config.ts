@@ -3,6 +3,9 @@ import { defineConfig } from "vite";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
+  define: {
+    __BUILD_ID__: JSON.stringify(process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 8) || Date.now().toString(36)),
+  },
   plugins: [
     tailwindcss(),
     {

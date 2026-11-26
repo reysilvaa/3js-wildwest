@@ -9,7 +9,7 @@
     "dev": "vite",
     "prebuild": "node scripts/generate-manifest.mjs",
     "build": "tsc --noEmit && vite build",
-    "postbuild": "node scripts/compress-models.mjs",
+    "postbuild": "node scripts/compress-models.mjs && node scripts/minify-json.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
   },

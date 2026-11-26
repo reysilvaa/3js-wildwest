@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader, type GLTF } from "three/addons/loaders/GLTFLoader.js";
-import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
+import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
+import { readPersistentGLB, writePersistentGLB } from "@/core/asset-cache.js";
 
 export interface ModelsManifest {
   buildings: Record<string, string>;
@@ -17,8 +18,10 @@ export interface ModelsManifest {
 
 export type AssetKey = string;
 
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath("/draco/");
 const sharedLoader = new GLTFLoader();
-sharedLoader.setMeshoptDecoder(MeshoptDecoder);
+sharedLoader.setDRACOLoader(dracoLoader);
 const gltfCache = new Map<string, Promise<GLTF>>();
 const assetCache = new Map<AssetKey, THREE.Group>();
 let manifestPromise: Promise<ModelsManifest> | null = null;
@@ -66,13 +69,27 @@ export async function resolveAssetUrl(keyOrUrl: AssetKey): Promise<string> {
   return resolved;
 }
 
+async function loadGLTFWithCache(url: string): Promise<GLTF> {
+  if (import.meta.env.DEV) return sharedLoader.loadAsync(url);
+
+  const basePath = url.slice(0, url.lastIndexOf("/") + 1);
+  const cachedBuf = await readPersistentGLB(url);
+  if (cachedBuf) return sharedLoader.parseAsync(cachedBuf, basePath);
+
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to load ${url} (${res.status})`);
+  const buf = await res.arrayBuffer();
+  void writePersistentGLB(url, buf.slice(0));
+  return sharedLoader.parseAsync(buf, basePath);
+}
+
 /**
- * Shared cached GLTF loader across the entire app (1 GLTFLoader, 1 network fetch per URL).
+ * Shared cached GLTF loader across the entire app (1 GLTFLoader, 1 network fetch per URL + persistent browser cache).
  */
 export function loadGLTF(url: string): Promise<GLTF> {
   let promise = gltfCache.get(url);
   if (!promise) {
-    promise = sharedLoader.loadAsync(url).catch((err) => {
+    promise = loadGLTFWithCache(url).catch((err) => {
       gltfCache.delete(url);
       throw err;
     });
